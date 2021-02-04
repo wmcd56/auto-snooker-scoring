@@ -5,6 +5,11 @@ from . import Player
 
 class Frame:
 
+    # ==================================================================================================================
+    # Frame class
+    # -Initialised with an input of an array of *structs, circles, should contain: x, y, r, colour, ball_id
+    # -
+    # ==================================================================================================================
     def __init__(self, circles):
         # for practice purposes
         p1_colour = 'purple'
