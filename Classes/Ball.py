@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from matplotlib import pyplot as plt
 
 
 class Ball:
@@ -59,8 +60,15 @@ class Ball:
             print("No circles detected")
             # return circles
 
-    def get_ball_colour(self, circles):
-
+    def get_ball_colour(self, frame, circles):
+        colour = ('b', 'g', 'r')
+        # for (x, y, r) in circles:
+        for channel, col in enumerate(colour):
+            RGBhist = cv2.calcHist(frame, channel, None, 256, [0, 256])
+            plt.plot(RGBhist, colour=col)
+            plt.xlim([0, 256])
+        plt.title('Histogram for colour in frame')
+        plt.show()
 
     def is_ball_moving(self):
         # add code to track ball
