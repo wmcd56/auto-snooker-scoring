@@ -17,13 +17,18 @@ class Frame:
 
         self.player1 = Player.Player(p1_colour)
         self.player2 = Player.Player(p2_colour)
-        self.balls = []
+        self.balls = {}
+        for i in circles:
+            self.balls[i] = Ball.Ball(circles[i][0], circles[i][1])
 
         if circles is not None:
             i = 0
             for (x, y, r, colour, ball_id) in circles:
                 loc = (x, y)
                 self.balls[i] = Ball.Ball(circles.colour, loc, ball_id)
+
+        print("The players playing include: \nPlayer 1: ", self.player1.cue_colour, "\nPlayer 2: ",
+              self.player2.cue_colour, "\nThe balls on the table are: ", self.balls)  # update for clearer ball count
 
     # def obtain_scores(self):
         # add code to track ball
