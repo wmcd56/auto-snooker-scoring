@@ -6,6 +6,8 @@ from matplotlib import pyplot as plt
 class Ball:
 
     def __init__(self, loc=None, colour=None, ball_id=None):
+
+        # python dictionary
         colour_point_list = {
             "white": 0,
             "red": 1,

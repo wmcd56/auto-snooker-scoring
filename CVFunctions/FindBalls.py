@@ -22,7 +22,7 @@ def find_balls(img):
     img = cv2.medianBlur(img, 5)
     cimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, 3, 100, maxRadius=100)
+    circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, 3, 80, minRadius=50, maxRadius=65)
 
     # ensure at least some circles were found
     if circles is not None:
