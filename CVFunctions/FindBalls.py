@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 
-def find_balls(img):
+def find_balls(img, show_image=True):
     # ==============================================================================================================
     # Function find_balls
     # -recognises the number of circles and returns their locations and radii in a mask
@@ -22,7 +22,7 @@ def find_balls(img):
     img = cv2.medianBlur(img, 5)
     cimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, 3, 80, minRadius=50, maxRadius=65)
+    circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, 3, 80, minRadius=50, maxRadius=60)
 
     # ensure at least some circles were found
     if circles is not None:
@@ -34,9 +34,9 @@ def find_balls(img):
             # corresponding to the center of the circle
             cv2.circle(output, (x, y), r, (0, 255, 0), 4)
             cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
-
-        cv2.imshow("output", output)
-        cv2.waitKey(0)
+        if show_image is True:
+            cv2.imshow("output", output)
+            cv2.waitKey(0)
         return rounded_circles
     else:
         print("No circles detected")

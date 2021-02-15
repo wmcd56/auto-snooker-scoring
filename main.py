@@ -26,8 +26,11 @@ from CVFunctions.FindBalls import find_balls
 from CVFunctions.BGRtoHSV import bgr_to_hsv
 from CVFunctions.ClassifyHSV import classify_hsv
 from CVFunctions.ClassifyBGR import classify_bgr
-
 from Functions.CalibrateColours import calibrate_colours
+
+
+# ======================================================================================================================
+# FRAME SET-UP
 
 # For different lighting conditions the colours should be calibrated first
 # This function requests the user to place balls of a certain colour within view of the camera
@@ -55,8 +58,8 @@ success, img = cap.read()
 
 
 circles = find_balls(img)
-# print(circles)
-# print(circles[0][1])
+
+# TODO: Make the following code a single function
 i = 0
 colour_circles = []
 for (x, y, r) in circles:
@@ -79,17 +82,100 @@ colour_circles is of the form [[[x, y, r],[h, s, v]],[[x, y, r],[h, s, v]], ...]
 or [[[x, y, r],[b, g, r]],[[x, y, r],[b, g, r]], ...]
 where each element of the outer array represents a ball
 """
-
-for circle in colour_circles:
-    ball_colour = classify_bgr(circle[1])
-    print(ball_colour)
-
-# print("GetBallColour:", get_ball_colour(roi))
-
-# frame = Frame(colour_circles)
-
-# print(frame.player1.cue_colour)
-
+balls = []
+for i in range(len(colour_circles)):
+    ball_colour = classify_bgr(colour_circles[i][1])
+    # print(ball_colour)
+    colour_circles[i] = list(colour_circles[i])
+    colour_circles[i].append(ball_colour)
+    # print(colour_circles[i][0][1])  # = ball_colour
+    location = (colour_circles[i][0][0], colour_circles[i][0][1])
+    balls.append(Ball(loc=location, colour=ball_colour))
 
 
+frame = Frame(balls)  # frame is now set up
+temp_balls = frame.balls
+print(frame.balls)
 
+cv2.imshow("window", img)
+cv2.waitKey(0)
+
+while True:
+
+    success, img = cap.read()
+    # print("At start: ", frame.balls)
+
+    # TODO: Replace the following code with a function call
+    circles = find_balls(img, False)
+    i = 0
+    colour_circles = []
+    for (x, y, r) in circles:
+        # print('x: ', x)  # debugging
+        # print('y: ', y)  # debugging
+        # print('Radius is: ', r)  # debugging
+        half_width = np.floor(np.sqrt((r ** 2) / 2))
+        # print('half-width: ', half_width)  # debugging
+        roi = img[int(y - half_width):int(y + half_width), int(x - half_width):int(x + half_width)]
+        bgr_colour = get_ball_colour(roi)
+        if bgr_colour is False:
+            continue
+        # hsv_colour = bgr_to_hsv(bgr_colour)
+        temp_colour_circles = (circles[i][:], bgr_colour)
+        # print("Temp colour: ", temp_colour_circles)  # debugging
+        colour_circles.append(temp_colour_circles)
+        # cv2.imshow("ROI", roi)  # debugging
+        # cv2.waitKey(1000)  # debugging
+        cv2.circle(img, (x, y), r, (0, 255, 0), 4)
+        cv2.rectangle(img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
+        i += 1
+    cv2.imshow("Video", img)
+
+    # print("Colour circles: ", colour_circles)
+
+    balls = []
+    for i in range(len(colour_circles)):
+        ball_colour = classify_bgr(colour_circles[i][1])
+        # print(ball_colour)
+        colour_circles[i] = list(colour_circles[i])
+        colour_circles[i].append(ball_colour)
+        location = (colour_circles[i][0][0], colour_circles[i][0][1])
+        balls.append(Ball(loc=location, colour=ball_colour))
+
+    additional_points = 0
+    num_reds = 0
+    temp_num_reds = 0
+    frame_reds = 0
+    updated_ball_colours = []
+    temp_ball_colours = []
+
+    for i in range(len(balls)):
+        updated_ball_colours.append(balls[i].colour)
+    # print("Updated colours: ", updated_ball_colours)
+    for i in range(len(temp_balls)):
+        temp_ball_colours.append(temp_balls[i].colour)
+
+    # temp_ball_colours is used to check if the ball is missing from two consecutive frames
+    for ball in frame.balls:
+        if ball.colour != 'red':
+            if ball.colour not in updated_ball_colours and ball.colour not in temp_ball_colours:  # and
+                additional_points += Ball.colour_point_list[ball.colour]
+        elif ball.colour == 'red':
+            frame_reds += 1
+        i += 1
+    for colour in updated_ball_colours:
+        if colour == 'red':
+            num_reds += 1
+    for colour in temp_ball_colours:
+        if colour == 'red':
+            temp_num_reds += 1
+
+    reds_gone = max((frame_reds-temp_num_reds), (frame_reds-num_reds))
+    additional_points = additional_points + reds_gone
+    frame.update_score(additional_points)
+    frame.balls = temp_balls
+    temp_balls = balls
+
+    print("Player 1's current score is: ", frame.obtain_scores())
+    # print("At end: ", frame.balls)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break

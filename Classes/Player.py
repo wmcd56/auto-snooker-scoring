@@ -8,8 +8,6 @@ class Player:
         self.cue_colour = cue_colour
         self.current_points = 0
 
-        print(self.cue_colour)
+        # print(self.cue_colour)
 
-    def update_score(self, points):
-        # add code to track ball
-        self.current_points += points
+    # def get_current_score(self):
