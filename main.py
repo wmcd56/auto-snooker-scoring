@@ -179,3 +179,5 @@ while True:
     # print("At end: ", frame.balls)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+
+    print('testing branches')
