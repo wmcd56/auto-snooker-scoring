@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from matplotlib import pyplot as plt
+from collections import deque
 
 
 class Ball:
@@ -15,44 +16,44 @@ class Ball:
         "black": 7
     }
 
-    def __init__(self, loc=None, colour=None, ball_id=None):
+    def __init__(self, loc=None, radius=None, colour=None, ball_id=None):
 
-        self.loc = loc
+        # self.loc = [None, None, None, None, loc]
+        self.loc = deque([], maxlen=256)  # can be changed
+        self.loc.appendleft(loc)
+        self.loc.appendleft(loc)
+        self.radius = radius
         self.colour = colour
         self.points_if_scored = Ball.colour_point_list[colour]
         self.ball_id = ball_id
 
-        print(self.colour, ": ", self.loc)
+        print(self.colour, ": ", self.loc[0], ", ", self.loc[1])
 
-    def track_ball(self):
-        # add code to track ball
-        # might not work as while loop needs to be in main
-        tracker = cv2.TrackerKCF_create()
-        cap = cv2.VideoCapture(0)
-        cap.set(3, 640)
-        cap.set(4, 480)
-        success, frame = cap.read()
-        tracker.init(frame, )
-        timer = 0
+    def track_ball(self, loc=None, colour=None):
+        # update a buffer of past 64 frame locations
+        # return buffer and ball_moving (boolean)
+        if colour is not None:
+            if colour != self.colour:
+                print("Not the same ball, check ball colour first")
+                return
+        if loc is None:
+            loc = self.loc
 
-        while True:
-            success, frame = cap.read()
+        # else presume ball colour has been checked
+        self.loc.appendleft(loc)
 
-            success, bbox = tracker.update(frame)
+        # if the new centre is less than 5 pixels from the last centre in x and y directions mark the ball as not moving
+        if (self.loc[1][0] - 5 <= self.loc[0][0] <= self.loc[1][0] + 5) and \
+                (self.loc[1][1] - 5 <= self.loc[0][1] <= self.loc[1][1] + 5):
+            ball_moving = False
+            print(f"The {colour} ball is not moving")
+        # if the new centre is greater than 5 pixels from the last centre in x or y directions mark the ball as moving
+        elif (self.loc[0][0] <= self.loc[1][0] - 5) or (self.loc[0][0] >= self.loc[1][0] + 5) or \
+                (self.loc[0][1] <= self.loc[1][1] - 5) or (self.loc[0][1] >= self.loc[1][1] + 5):
+            ball_moving = True
+            print(f"The {colour} ball is moving")
+        else:
+            print(f"Bug in tracking the {colour} ball, it's probably not moving")
 
-            if success:
-                drawBox(frame, bbox)
-            else:
-                cv2.putText(frame, "LOST", (75, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-
-            fps = cv2.getTickFrequency() / (cv2.getTickCount() - timer)
-            timer = cv2.getTickCount()
-            cv2.putText(frame, str(int(fps)), (75, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            cv2.imshow("Tracking", frame)
-
-            k = cv2.waitKey(30) & 0xff
-            if k == 27:
-                break
-
-
+            return
         return ball_moving

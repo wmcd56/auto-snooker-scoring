@@ -1,4 +1,6 @@
 import cv2
+import numpy
+from Functions.PixelsDistance import pixels_distance
 from .Ball import Ball
 from .Player import Player
 
@@ -39,3 +41,16 @@ class Frame:
     def update_score(self, additional_points):
         current_player = self.player1
         current_player.current_points += additional_points
+
+    def collision_check(self):
+        balls_touching = []
+        for ball in self.balls:
+            for b in self.balls:
+                if ball.loc[0] == b.loc[0]:
+                    continue
+                elif (pixels_distance(ball.loc[0], b.loc[0]) <= 2*ball.radius + 2) or (pixels_distance(ball.loc[0], b.loc[0]) <= 2*b.radius + 2):
+                    balls_touching.append((ball.loc[0], b.loc[0]))
+                    print(f"The {ball.colour} ball is touching the {b.colour} ball")
+
+
+
