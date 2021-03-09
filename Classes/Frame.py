@@ -3,6 +3,7 @@ import numpy
 from Functions.PixelsDistance import pixels_distance
 from .Ball import Ball
 from .Player import Player
+from .WhiteBall import WhiteBall
 
 
 class Frame:
@@ -12,13 +13,14 @@ class Frame:
     # -Initialised with an input of an array of *structs, circles, should contain: x, y, r, colour, ball_id
     # -
     # ==================================================================================================================
-    def __init__(self, balls, mode='practice'):
+    def __init__(self, white_ball, balls, mode='practice'):
         # for practice purposes
         p1_colour = 'purple'
         p2_colour = 'orange'
 
         self.player1 = Player(p1_colour)
         self.player2 = Player(p2_colour)
+        self.white_ball = white_ball
         self.balls = balls
 
         if mode == 'practice':
@@ -28,6 +30,8 @@ class Frame:
                   self.player2.cue_colour, "\nThe balls on the table are: ")  # update for clearer ball count
         for ball in self.balls:
             print(ball.colour)
+        if self.white_ball:
+            print(white_ball.ball.colour)
 
     def get_current_player(self):
         # add code to track ball
@@ -41,6 +45,35 @@ class Frame:
     def update_score(self, additional_points):
         current_player = self.player1
         current_player.current_points += additional_points
+
+    def balls_moving(self):
+        totals = []
+        balls_moving = None
+        # check past five frames to see if balls are all static
+        for i in range(5):
+            xy_total = 0
+            # xy_total = xy_total + self.white_ball.ball.loc[i][0] + self.white_ball.ball.loc[i][1]
+            for ball in self.balls:
+                # print(ball.loc[i][0], ', ', ball.loc[i][1])  # debugging
+                xy_total = xy_total + ball.loc[i][0] + ball.loc[i][1]
+            totals.append(xy_total)
+
+        # print('xy_total: ', totals)  # debugging
+
+        # check to see if the totals are similar enough to conclude that the balls are not moving
+        sum_xy = 0
+        for num in totals:
+            sum_xy = sum_xy + num
+
+        # each xy_total for each frame must be within +/-5 of the average of the five frames
+        for num in totals:
+            if num-5 <= sum_xy/len(totals) <= num+5:
+                balls_moving = False
+            else:
+                balls_moving = True
+
+        if balls_moving is not None:
+            return balls_moving
 
     def collision_check(self):
         balls_touching = []

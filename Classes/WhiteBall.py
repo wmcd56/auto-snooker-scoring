@@ -14,19 +14,25 @@ class WhiteBall:
 
     def first_collision(self, balls):
         ball_moving = self.ball.track_ball()
+        # ball_moving = True
         first_ball = None
-        while ball_moving:
-            distances = []
-            for b in balls:
-                d = pixels_distance(self.ball.loc, b.loc)
-                distances.append((b, d))
 
+        # loop until the white ball has stopped moving or the loop has been broken because the white has hit a ball
+        if ball_moving:  # cannot loop because it will prevent the necessary looping in the main()
+            distances = []  # empty list to hold the distance values between the white ball and all other balls
+            for b in balls:
+                d = pixels_distance(self.ball.loc[0], b.loc[0])  # calculate the distance between the white ball and ball b
+                distances.append((b, d))
+            print('Distances: ', distances)
             # potentially a place for multiprocessing as it could happen that two balls collide at exactly the same time
+            # check to find the first ball whose distance is closer than that of two radii +/-5 pixels
             for elem in distances:
-                if elem[1] - 5 <= 2*elem[0].radius <= elem[1] + 5:
-                    print(f"The white ball is touching the {elem[0].colour} ball")
+                if elem[1] - 3 <= 2*elem[0].radius <= elem[1] + 3:
+                    print(f"The white ball collided with the {elem[0].colour} ball first")
                     first_ball = elem[0]
                     break
 
-            ball_moving = self.ball.track_ball()
+            # commented for now because it might interrupt main()
+            # check to see if the white ball is still moving so that the loop can run again
+            # ball_moving = self.ball.track_ball()
         return first_ball

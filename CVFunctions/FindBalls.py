@@ -1,45 +1,51 @@
-# needs to be changed for optimised return
+from Classes.Ball import Ball
+from Classes.WhiteBall import WhiteBall
+from .FindCircles import find_circles
+from .GetBallColour import get_ball_colour
+from .ClassifyBGR import classify_bgr
+from .ClassifyHSV import classify_hsv
 
-import cv2
 import numpy as np
 
 
 def find_balls(img, show_image=True):
-    # ==============================================================================================================
-    # Function find_balls
-    # -recognises the number of circles and returns their locations and radii in a mask
-    #
-    # INPUT - cv2.imread(pathToImage), or, video frame
-    #
-    # OUTPUT - circles
-    #        - cv2.mask of x, y locations and radii
-    #
-    # OUTPUT USED - as input to get_ball_colour
-    #
-    # ==============================================================================================================
+    circles = find_circles(img, show_image)
 
-    output = img.copy()
-    img = cv2.medianBlur(img, 5)
-    cimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, 3, 80, minRadius=50, maxRadius=60)
-
-    # ensure at least some circles were found
-    if circles is not None:
-        # convert the (x, y) coordinates and radius of the circles to integers
-        rounded_circles = np.round(circles[0, :]).astype("int")
-        # loop over the (x, y) coordinates and radius of the circles
-        for (x, y, r) in rounded_circles:
-            # draw the circle in the output image, then draw a rectangle
-            # corresponding to the center of the circle
-            cv2.circle(output, (x, y), r, (0, 255, 0), 4)
-            cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
-        if show_image is True:
-            cv2.imshow("output", output)
-            cv2.waitKey(0)
-        return rounded_circles
-    else:
-        print("No circles detected")
-        # return circles
-
-
+    i = 0
+    colour_circles = []
+    for (x, y, r) in circles:
+        # print('x: ', x)  # debugging
+        # print('y: ', y)  # debugging
+        # print('Radius is: ', r)  # debugging
+        half_width = np.floor(np.sqrt((r ** 2) / 2))
+        # print('half-width: ', half_width)  # debugging
+        roi = img[int(y - half_width):int(y + half_width), int(x - half_width):int(x + half_width)]
+        bgr_colour = get_ball_colour(roi)
+        if bgr_colour is False:
+            continue
+        # hsv_colour = bgr_to_hsv(bgr_colour)
+        #TODO: Revise below
+        temp_colour_circles = (circles[i][:], bgr_colour)
+        # print("Temp colour: ", temp_colour_circles)  # debugging
+        colour_circles.append(temp_colour_circles)
+        # cv2.imshow("ROI", roi)  # debugging
+        # cv2.waitKey(1000)  # debugging
+        i += 1
+    """
+    colour_circles is of the form [[[x, y, r],[h, s, v]],[[x, y, r],[h, s, v]], ...] 
+    or [[[x, y, r],[b, g, r]],[[x, y, r],[b, g, r]], ...]
+    where each element of the outer array represents a ball
+    """
+    balls = []
+    white_ball = None
+    for i in range(len(colour_circles)):
+        ball_colour = classify_bgr(colour_circles[i][1])
+        colour_circles[i] = list(colour_circles[i])
+        colour_circles[i].append(ball_colour)
+        location = (colour_circles[i][0][0], colour_circles[i][0][1])
+        radius = colour_circles[i][0][2]
+        if ball_colour == 'white':
+            white_ball = WhiteBall(location, radius, ball_colour)
+        else:
+            balls.append(Ball(location, radius, ball_colour))
+    return white_ball, balls

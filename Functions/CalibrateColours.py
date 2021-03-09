@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 import time
 import json
-from CVFunctions.FindBalls import find_balls
+from CVFunctions.FindCircles import find_circles
 from CVFunctions.GetBallColour import get_ball_colour
 from CVFunctions.BGRtoHSV import bgr_to_hsv
 
@@ -25,7 +25,7 @@ def calibrate(colours, colour, mode=None):
         cap.set(4, 480)
         success, img = cap.read()
 
-        circles = find_balls(img)
+        circles = find_circles(img)
         (x, y, r) = circles[0][0], circles[0][1], circles[0][2]
         half_width = np.floor(np.sqrt((r ** 2) / 2))
         roi = img[int(y - half_width):int(y + half_width), int(x - half_width):int(x + half_width)]
@@ -70,7 +70,7 @@ def calibrate_colours(mode=None):
             cap.set(4, 480)
             success, img = cap.read()
 
-            circles = find_balls(img)
+            circles = find_circles(img)
             (x, y, r) = circles[0][0], circles[0][1], circles[0][2]
             half_width = np.floor(np.sqrt((r ** 2) / 2))
             roi = img[int(y - half_width):int(y + half_width), int(x - half_width):int(x + half_width)]

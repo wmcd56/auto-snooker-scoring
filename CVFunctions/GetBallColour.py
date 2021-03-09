@@ -17,7 +17,7 @@ def get_ball_colour(img):
     if data.shape[0] > 0 and data.shape[1] > 0:
         compactness, labels, centers = cv2.kmeans(data, 1, None, criteria, 10, flags)
         return centers[0]
-    # print('Dominant color is: bgr({})'.format(centers[0].astype(np.int32)))
+        # print('Dominant color is: bgr({})'.format(centers[0].astype(np.int32)))
     # --------------------------------------------------------------------------------------------------------------
 
     else:
