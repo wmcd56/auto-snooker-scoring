@@ -114,8 +114,9 @@ def main():
     foul_flag = False
     foul_type = ''
 
-    balls_gone = []
-    white_gone = []
+    balls_added = []  # used for spotting balls back on the table
+    balls_gone = []  # used to check balls that have left the table
+    white_gone = []  # used to count frames that the white ball has not been registered
     frame_count = 0  # used to ensure certain situations occur in subsequent frames
     max_frame_count = 300
     consecutive_frames = 5  # used for the number of consecutive frames needed to register a ball as having been potted
@@ -129,6 +130,7 @@ def main():
             frame_count = 0
 
         reds_on_table = []  # list to hold the red balls detected to be on the table in this turn
+        colours_on_table = []
         frame_reds = []  # list of red balls registered to be in the game
         updated_balls = []  # list of balls which have been successfully updated within this loop
         indexes = []  # index of red balls in frame_reds
@@ -170,8 +172,6 @@ def main():
                     ball.track_ball(b.loc[0])  # update the location of the coloured ball
                     updated_balls.append(ball)  # add the coloured ball to the list of coloured balls still on table
 
-        # if len(reds_on_table) < len(frame_reds):
-
         # TODO: a more efficient algorithm could be used here
         for r in reds_on_table:
             differences = []
@@ -194,10 +194,14 @@ def main():
 
         # tracking is complete
         # --------------------------------------------------------------------------------------------------------------
-        # Find the balls in frame.balls that were not found in the new image, remove them and update score accordingly
+        # Update frame.balls with new information
+        # 1. Ensure white ball has not been pocketed
+        # 2. Add spotted balls back to frame.balls
+        # 3. Find the balls in frame.balls that were not found in the new image, remove them and update score
 
+        # 1. ___________________________________________________________________________________________________________
         # TODO: review this, currently player will still be awarded a point if the red ball is pocketed with the white
-        # first ensure that the white ball has not been pocketed
+        # first ensure that the white ball has not been pocketed, if so flag it and award no points
         # remove old elements of white_gone
         for elem in white_gone:
             if frame_count >= consecutive_frames:  # TODO: add functionality for wrap around from max_frame_count
@@ -209,6 +213,38 @@ def main():
             foul_flag = True
             foul_type += 'White ball has been potted.\n'
 
+        # 2. ___________________________________________________________________________________________________________
+        # if more balls found in the image than in frame.balls, count consecutive frames, add to frame.balls after 5
+        # to save on processing this only happens when an extra ball is found
+        if len(balls_on_table) > len(frame.balls):
+            for ball in frame.balls:
+                colours_on_table.append(ball.colour)
+            for b in balls_on_table:
+                if (b.colour == 'red') or (b.colour in colours_on_table):
+                    continue
+                else:
+                    balls_added.append((b, frame_count))
+        # remove any old balls recorded in balls_added
+        for elem in balls_added:
+            if elem[1] < frame_count - consecutive_frames:
+                balls_added.remove(elem)
+        if len(balls_added) >= 1:
+            print('Balls added: ', balls_added[0][0].colour)
+        # once balls_added is longer than the required consecutive frames, check what balls have been added
+        if len(balls_added) >= consecutive_frames:
+            to_be_added = []
+            for elem in balls_added:
+                count_frames_present = 0
+                for e in balls_added:
+                    if elem[0].loc[0] == e[0].loc[0]:
+                        count_frames_present += 1
+                # if the spotted ball has been present in the last five frames add it to frame.balls
+                if count_frames_present >= consecutive_frames:
+                    frame.balls.append(elem[0])
+                    print(f'The {elem[0].colour} ball has been spotted.')
+                    break
+
+        # 3. ___________________________________________________________________________________________________________
         # look for differences between the balls that were updated and the balls in frame.balls
         for ball in frame.balls:
             ball_in_updated = False
@@ -232,12 +268,12 @@ def main():
                     if elem[0].loc[0] == e[0].loc[0]:
                         count_frames_gone += 1
 
-                if count_frames_gone > (consecutive_frames-1):  # if the ball is gone in last five frames remove it
+                if count_frames_gone >= consecutive_frames:  # if the ball is gone in last five frames remove it
                     print('Removed: ', elem[0].colour)
                     if elem[0].colour in ball_to_hit:  # the correct ball colour has been pocketed
                         if len(frame_reds) >= 1:
                             if 'red' in ball_to_hit:
-                                ball_to_hit = ['black', 'pink', 'blue', 'green', 'yellow', 'brown']
+                                ball_to_hit = Ball.ball_order
                             else:
                                 ball_to_hit = ['red']
                         else:
@@ -247,7 +283,8 @@ def main():
                         foul_flag = True
                         foul_type += 'Failed to pot the correct ball colour.\n'
                     frame.balls.remove(elem[0])
-                    additional_points += Ball.colour_point_list[elem[0].colour]  # ball has been potted, find points
+                    if foul_flag is False:  # only award the points if no foul occurred in the shot
+                        additional_points += Ball.colour_point_list[elem[0].colour]  # ball has been potted, find points
                     for i in balls_gone:  # empty the balls_gone list of the removed ball
                         if i[0].colour == elem[0].colour:
                             to_be_removed.append(i)

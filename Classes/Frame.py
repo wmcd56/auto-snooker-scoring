@@ -48,15 +48,19 @@ class Frame:
 
     def balls_moving(self):
         totals = []
+        balls_to_check = []
         balls_moving = None
         # check past five frames to see if balls are all static
         for i in range(5):
             xy_total = 0
-            # xy_total = xy_total + self.white_ball.ball.loc[i][0] + self.white_ball.ball.loc[i][1]
+            # TODO: review how this works in tandem with the white_ball_moving function
+            xy_total = xy_total + self.white_ball.ball.loc[i][0] + self.white_ball.ball.loc[i][1]
             for ball in self.balls:
-                # print(ball.loc[i][0], ', ', ball.loc[i][1])  # debugging
-                if len(ball.loc) >= i:
-                    xy_total = xy_total + ball.loc[i][0] + ball.loc[i][1]
+                if len(ball.loc) >= 5:  # ensure that all balls being checked have enough length in loc deque
+                    balls_to_check.append(ball)  # can arise that they do not have enough length when spotted
+
+            for ball in balls_to_check:
+                xy_total = xy_total + ball.loc[i][0] + ball.loc[i][1]
             totals.append(xy_total)
 
         # print('xy_total: ', totals)  # debugging
