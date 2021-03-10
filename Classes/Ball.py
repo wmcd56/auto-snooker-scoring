@@ -16,6 +16,8 @@ class Ball:
         "black": 7
     }
 
+    ball_order = ['yellow', 'green', 'brown', 'blue', 'pink', 'black']
+
     def __init__(self, loc=None, radius=None, colour=None, ball_id=None):
 
         # self.loc = [None, None, None, None, loc]

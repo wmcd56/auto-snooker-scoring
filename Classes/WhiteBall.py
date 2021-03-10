@@ -23,11 +23,11 @@ class WhiteBall:
             for b in balls:
                 d = pixels_distance(self.ball.loc[0], b.loc[0])  # calculate the distance between the white ball and ball b
                 distances.append((b, d))
-            print('Distances: ', distances)
+            # print('Distances: ', distances)
             # potentially a place for multiprocessing as it could happen that two balls collide at exactly the same time
             # check to find the first ball whose distance is closer than that of two radii +/-5 pixels
             for elem in distances:
-                if elem[1] - 3 <= 2*elem[0].radius <= elem[1] + 3:
+                if elem[1] - 8 <= 2*elem[0].radius <= elem[1] + 8:
                     print(f"The white ball collided with the {elem[0].colour} ball first")
                     first_ball = elem[0]
                     break

@@ -109,19 +109,23 @@ def main():
         colours_bgr = json.load(file)
 
     ball_to_hit = ['red']  # first ball to hit must be red, this is updated once a red is hit
+    ball_pocketed = ['']  # this list holds the balls which were pocketed in the last shot
+    ball_index = -1  # used in the second stage, to get what ball should be pocketed next, starts at -1 as +1 is added
     foul_flag = False
     foul_type = ''
 
-    red_balls_gone = []
     balls_gone = []
+    white_gone = []
     frame_count = 0  # used to ensure certain situations occur in subsequent frames
+    max_frame_count = 300
+    consecutive_frames = 5  # used for the number of consecutive frames needed to register a ball as having been potted
     while True:
         # ==============================================================================================================
-        # time.sleep(1)  # debugging
-        # print('Ball to hit: ', ball_to_hit)
+        time.sleep(1)  # debugging
+        print('Ball to hit: ', ball_to_hit)
         # --------------------------------------------------------------------------------------------------------------
         # initialise variables
-        if frame_count == 300:  # arbitrarily chosen frame cap
+        if frame_count == max_frame_count:  # arbitrarily chosen frame cap
             frame_count = 0
 
         reds_on_table = []  # list to hold the red balls detected to be on the table in this turn
@@ -149,9 +153,9 @@ def main():
         # if the white ball is still on the table update it's location
         if white_ball_on_table:
             frame.white_ball.ball.track_ball(white_ball_on_table.ball.loc[0])
-            output_white = ''
+        # otherwise add the frame number to the list white_gone
         else:
-            output_white = 'Place white ball back on the table.'
+            white_gone.append(frame_count)
 
         # find all of the red balls on the table and in the frame.balls list
         for b in balls_on_table:
@@ -166,6 +170,8 @@ def main():
                     ball.track_ball(b.loc[0])  # update the location of the coloured ball
                     updated_balls.append(ball)  # add the coloured ball to the list of coloured balls still on table
 
+        # if len(reds_on_table) < len(frame_reds):
+
         # TODO: a more efficient algorithm could be used here
         for r in reds_on_table:
             differences = []
@@ -174,29 +180,51 @@ def main():
             if differences:
                 min_diff = min(differences)  # find the minimum difference
                 index = differences.index(min_diff)  # find index of minimum difference
-                frame_reds[index].track_ball(r.loc[0])  # update the correct red ball with the new location
-                updated_balls.append(frame_reds[index])
-                indexes.append(index)
+                if min_diff <= r.radius:  # only update the ball if the minimum distance is less than the radius width
+                    frame_reds[index].track_ball(r.loc[0])  # update the correct red ball with the new location
+                    updated_balls.append(frame_reds[index])
+                    indexes.append(index)
         # print('indexes: ', indexes)  # prints the indexes or identities of the red balls
+
+        # debugging
+        # out = ''
+        # for b in updated_balls:
+        #     out += f'{b.colour} '
+        # print('Updated balls: ', out)
 
         # tracking is complete
         # --------------------------------------------------------------------------------------------------------------
         # Find the balls in frame.balls that were not found in the new image, remove them and update score accordingly
+
+        # TODO: review this, currently player will still be awarded a point if the red ball is pocketed with the white
+        # first ensure that the white ball has not been pocketed
+        # remove old elements of white_gone
+        for elem in white_gone:
+            if frame_count >= consecutive_frames:  # TODO: add functionality for wrap around from max_frame_count
+                if elem < frame_count - consecutive_frames:
+                    white_gone.remove(elem)
+
+        # if there are more than four consecutive frames where the white is missing, flag a foul
+        if len(white_gone) > (consecutive_frames - 1):
+            foul_flag = True
+            foul_type += 'White ball has been potted.\n'
+
         # look for differences between the balls that were updated and the balls in frame.balls
         for ball in frame.balls:
             ball_in_updated = False
             for b in updated_balls:
-                if b.colour == ball.colour:
+                if b.loc[0] == ball.loc[0]:
                     ball_in_updated = True
             if not ball_in_updated:
                 balls_gone.append((ball, frame_count))
         # remove any old balls recorded in balls_gone, this may arise due to inconsistent hough circles results
         for elem in balls_gone:
-            if elem[1] < frame_count - 5:
+            if elem[1] < frame_count - consecutive_frames:
                 balls_gone.remove(elem)
+        # print('Balls gone: ', balls_gone)
 
         # once balls_gone is longer than or equal to 5 elements, check the balls that are gone
-        if len(balls_gone) >= 5:
+        if len(balls_gone) >= consecutive_frames:
             to_be_removed = []
             for elem in balls_gone:
                 count_frames_gone = 0
@@ -204,14 +232,17 @@ def main():
                     if elem[0].loc[0] == e[0].loc[0]:
                         count_frames_gone += 1
 
-                if count_frames_gone > 4:  # if the ball has been gone in all of the last five frames remove it
+                if count_frames_gone > (consecutive_frames-1):  # if the ball is gone in last five frames remove it
                     print('Removed: ', elem[0].colour)
                     if elem[0].colour in ball_to_hit:  # the correct ball colour has been pocketed
-                        # TODO: check this code segment
-                        if 'red' in ball_to_hit:
-                            ball_to_hit = ['black', 'pink', 'blue', 'green', 'yellow', 'brown']
+                        if len(frame_reds) >= 1:
+                            if 'red' in ball_to_hit:
+                                ball_to_hit = ['black', 'pink', 'blue', 'green', 'yellow', 'brown']
+                            else:
+                                ball_to_hit = ['red']
                         else:
-                            ball_to_hit = ['red']
+                            # TODO: review that this works for second stage of break
+                            ball_to_hit = Ball.ball_order[ball_index + 1]
                     else:
                         foul_flag = True
                         foul_type += 'Failed to pot the correct ball colour.\n'
@@ -240,13 +271,14 @@ def main():
             # print('First ball: ', first_ball)
             if first_ball is not None:
                 # print(f'White ball hit the {first_ball.colour} ball!')
-                if first_ball.colour != ball_to_hit:
+                if first_ball.colour not in ball_to_hit:
                     foul_flag = True
                     foul_type += 'Failed to hit the correct ball colour. \n'
 
         if foul_flag:
             print('Break is over, foul has occurred. \nFoul: ', foul_type)
             exit()
+
         # update player's score
         frame.update_score(additional_points)
 

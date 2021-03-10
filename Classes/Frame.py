@@ -55,7 +55,8 @@ class Frame:
             # xy_total = xy_total + self.white_ball.ball.loc[i][0] + self.white_ball.ball.loc[i][1]
             for ball in self.balls:
                 # print(ball.loc[i][0], ', ', ball.loc[i][1])  # debugging
-                xy_total = xy_total + ball.loc[i][0] + ball.loc[i][1]
+                if len(ball.loc) >= i:
+                    xy_total = xy_total + ball.loc[i][0] + ball.loc[i][1]
             totals.append(xy_total)
 
         # print('xy_total: ', totals)  # debugging
