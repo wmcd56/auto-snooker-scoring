@@ -34,12 +34,13 @@ class Frame:
             print(white_ball.ball.colour)
 
     def get_current_player(self):
-        # add code to track ball
+        # TODO: add functionality for obtaining the current player for game scenario
         current_player = self.player1
         return current_player
 
     def obtain_scores(self):
-        # add code to track ball
+        # return the current points of player
+        # TODO: add functionality for game scenario
         return self.player1.current_points  # , self.player2.current_points
 
     def update_score(self, additional_points):
@@ -89,6 +90,3 @@ class Frame:
                 elif (pixels_distance(ball.loc[0], b.loc[0]) <= 2*ball.radius + 2) or (pixels_distance(ball.loc[0], b.loc[0]) <= 2*b.radius + 2):
                     balls_touching.append((ball.loc[0], b.loc[0]))
                     print(f"The {ball.colour} ball is touching the {b.colour} ball")
-
-
-

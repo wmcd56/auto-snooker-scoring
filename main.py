@@ -90,7 +90,17 @@ def main():
     # ------------------------------------------------------------------------------------------------------------------
     # start gui
     score = 0
-    layout = [[sg.Text(f"Player's current score: {score}")], [sg.Button("OK")]]
+    layout = [[sg.Text("Player's current score: "), sg.Text("   ", key='score')],
+              [sg.Button('Input score manually', visible=True)],
+              [sg.Text("                                        ", key='manual score text'),
+               sg.Input(key='additional score', visible=False)],
+              [sg.Button('Input foul manually', visible=True)],
+              [sg.Text("                                        ", key='manual foul text'),
+               sg.Input(key='manual foul', visible=False)],
+              [sg.Button('Submit', key='_SUBMIT_', visible=False),
+               sg.Button('Cancel', key='_CANCEL_', visible=False)],
+              [sg.Button('Finish')],
+              [sg.Text("                                         ", key='final output')]]
     window = sg.Window("AutoSnooker", layout)
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -114,6 +124,9 @@ def main():
     foul_flag = False
     foul_type = ''
 
+    manual_foul = None
+    manual_additional_score = None
+
     balls_added = []  # used for spotting balls back on the table
     balls_gone = []  # used to check balls that have left the table
     white_gone = []  # used to count frames that the white ball has not been registered
@@ -122,8 +135,8 @@ def main():
     consecutive_frames = 5  # used for the number of consecutive frames needed to register a ball as having been potted
     while True:
         # ==============================================================================================================
-        time.sleep(1)  # debugging
-        print('Ball to hit: ', ball_to_hit)
+        # time.sleep(1)  # debugging
+        # print('Ball to hit: ', ball_to_hit)
         # --------------------------------------------------------------------------------------------------------------
         # initialise variables
         if frame_count == max_frame_count:  # arbitrarily chosen frame cap
@@ -199,7 +212,7 @@ def main():
         # 2. Add spotted balls back to frame.balls
         # 3. Find the balls in frame.balls that were not found in the new image, remove them and update score
 
-        # 1. ___________________________________________________________________________________________________________
+        # 1. """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
         # TODO: review this, currently player will still be awarded a point if the red ball is pocketed with the white
         # first ensure that the white ball has not been pocketed, if so flag it and award no points
         # remove old elements of white_gone
@@ -213,7 +226,7 @@ def main():
             foul_flag = True
             foul_type += 'White ball has been potted.\n'
 
-        # 2. ___________________________________________________________________________________________________________
+        # 2. """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
         # if more balls found in the image than in frame.balls, count consecutive frames, add to frame.balls after 5
         # to save on processing this only happens when an extra ball is found
         if len(balls_on_table) > len(frame.balls):
@@ -244,7 +257,7 @@ def main():
                     print(f'The {elem[0].colour} ball has been spotted.')
                     break
 
-        # 3. ___________________________________________________________________________________________________________
+        # 3. """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
         # look for differences between the balls that were updated and the balls in frame.balls
         for ball in frame.balls:
             ball_in_updated = False
@@ -270,6 +283,7 @@ def main():
 
                 if count_frames_gone >= consecutive_frames:  # if the ball is gone in last five frames remove it
                     print('Removed: ', elem[0].colour)
+                    ball_pocketed = elem[0].colour
                     if elem[0].colour in ball_to_hit:  # the correct ball colour has been pocketed
                         if len(frame_reds) >= 1:
                             if 'red' in ball_to_hit:
@@ -312,11 +326,17 @@ def main():
                     foul_flag = True
                     foul_type += 'Failed to hit the correct ball colour. \n'
 
+        if manual_foul is not None:
+            foul_flag = True
+            foul_type = "Manually identified foul"
+
         if foul_flag:
             print('Break is over, foul has occurred. \nFoul: ', foul_type)
             exit()
 
         # update player's score
+        if manual_additional_score is not None:
+            additional_points += int(manual_additional_score)
         frame.update_score(additional_points)
 
         # --------------------------------------------------------------------------------------------------------------
@@ -338,17 +358,67 @@ def main():
         cv2.imshow("Video", img)
         frame_count += 1
 
-        print('Player\'s current score: ', frame.obtain_scores())
-
-        # show the player's current score on the gui window
-        # while True:
-        #     window.refresh()
-        #     event, value = window.Read()
-        #     if event == 'EXIT' or event is None:
-        #         break  # exit button clicked
-
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
+
+        # --------------------------------------------------------------------------------------------------------------
+        # GUI events and updates
+        manual_foul = None
+        manual_additional_score = None
+
+        event, values = window.Read(timeout=1)
+        if event == 'EXIT' or event is None:
+            break  # exit button clicked
+
+        # if the user prompts a manual score input
+        if event == 'Input score manually':
+            window['manual score text'].update("Manual score addition: ")
+            window['additional score'].update(visible=True)
+            window['_SUBMIT_'].update(visible=True)
+            window['_CANCEL_'].update(visible=True)
+            while True:
+                event, values = window.Read(timeout=1)  # no timeout, the entire program is paused and awaits input
+                if event == '_SUBMIT_':
+                    manual_additional_score = values['additional score']
+                    break
+                elif event == '_CANCEL_':
+                    break
+            window['manual score text'].update("")
+            window['additional score'].update(visible=False)
+            window['_SUBMIT_'].update(visible=False)
+            window['_CANCEL_'].update(visible=False)
+
+        # if the user prompts a manual foul input
+        if event == 'Input foul manually':
+            window['manual foul text'].update("Manual foul input (points): ")
+            window['manual foul'].update(visible=True)
+            window['_SUBMIT_'].update(visible=True)
+            window['_CANCEL_'].update(visible=True)
+            while True:
+                event, values = window.Read(timeout=1)  # no timeout, the entire program is paused and awaits input
+                if event == '_SUBMIT_':
+                    manual_foul = values['manual foul']
+                    break
+                elif event == '_CANCEL_':
+                    break
+            window['manual foul text'].update("")
+            window['manual foul'].update(visible=False)
+            window['_SUBMIT_'].update(visible=False)
+            window['_CANCEL_'].update(visible=False)
+
+        # if the user prompts the program to finish
+        if event == 'Finish':
+            window['final output'].update(f"Final score: {frame.obtain_scores()}")
+
+        # debugging and functionality check
+        if manual_foul is not None:
+            print(f'manual foul: {manual_foul}')
+        if manual_additional_score is not None:
+            print(f'manual additional score: {manual_additional_score}')
+
+        window['score'].update(str(frame.obtain_scores()))
+        window.refresh()
+
         # end of while True:
         # ==============================================================================================================
     # window.close()  # close gui window
