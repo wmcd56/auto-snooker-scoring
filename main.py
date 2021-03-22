@@ -8,6 +8,9 @@ Completed  -
 Author: William McDonnell
 Specific code segments sourced from others are cited with the url from where they were obtained
 Further information on the operation  of this system can be found in the accompanying class and sequence diagrams
+
+Version: 2.0
+Version aim: to incorporate functionality for a match play scenario
 """
 # ======================================================================================================================
 # This file runs the main program for the system and utilises all classes and functions included in this directory
