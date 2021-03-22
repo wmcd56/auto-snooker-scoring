@@ -46,6 +46,7 @@ def calibrate(colours, colour, mode=None):
         colours[colour] = bgr_to_hsv(ball_colour)
 '''
 
+
 def calibrate_colours(mode=None):
     colours = {
         'red': [],

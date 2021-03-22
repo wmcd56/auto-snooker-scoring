@@ -90,18 +90,19 @@ def main():
     # ------------------------------------------------------------------------------------------------------------------
     # start gui
     score = 0
-    layout = [[sg.Text("Player's current score: "), sg.Text("   ", key='score')],
-              [sg.Button('Input score manually', visible=True)],
-              [sg.Text("                                        ", key='manual score text'),
+    fnt = 'Arial 14'
+    layout = [[sg.Text("Player's current score: ", font=fnt), sg.Text("   ", font=fnt, key='score')],
+              [sg.Button('Input score manually', font=fnt, visible=True)],
+              [sg.Text("                                        ", font=fnt, key='manual score text'),
                sg.Input(key='additional score', visible=False)],
-              [sg.Button('Input foul manually', visible=True)],
-              [sg.Text("                                        ", key='manual foul text'),
+              [sg.Button('Input foul manually', font=fnt, visible=True)],
+              [sg.Text("                                        ", font=fnt, key='manual foul text'),
                sg.Input(key='manual foul', visible=False)],
-              [sg.Button('Submit', key='_SUBMIT_', visible=False),
-               sg.Button('Cancel', key='_CANCEL_', visible=False)],
-              [sg.Button('Finish')],
-              [sg.Text("                                         ", key='final output')]]
-    window = sg.Window("AutoSnooker", layout)
+              [sg.Button('Submit', font=fnt, key='_SUBMIT_', visible=False),
+               sg.Button('Cancel', font=fnt, key='_CANCEL_', visible=False)],
+              [sg.Button('Finish', font=fnt)],
+              [sg.Text("                                         ", font=fnt, key='final output')]]
+    window = sg.Window("AutoSnooker", layout, size=(400, 600))
 
     # ------------------------------------------------------------------------------------------------------------------
     # Find the balls that have been laid on the table
@@ -137,6 +138,7 @@ def main():
         # ==============================================================================================================
         # time.sleep(1)  # debugging
         # print('Ball to hit: ', ball_to_hit)
+        sg.OneLineProgressMeter('My meter title', frame_count, max_frame_count, 'key')
         # --------------------------------------------------------------------------------------------------------------
         # initialise variables
         if frame_count == max_frame_count:  # arbitrarily chosen frame cap
