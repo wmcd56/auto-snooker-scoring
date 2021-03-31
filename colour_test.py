@@ -9,17 +9,20 @@ from CVFunctions.FindCircles import find_circles
 from CVFunctions.GetBallColour import get_ball_colour
 from CVFunctions.BGRtoHSV import bgr_to_hsv
 from CVFunctions.ClassifyBGR import classify_bgr
+from CVFunctions.CaptureFrame import capture_frame
 
-cap = cv2.VideoCapture(0)  # comment out for small set up
-cap.set(3, 1024)  # comment out for big set up
-cap.set(4, 768)  # comment out for big set up
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # comment out for small set up
+cap.set(3, 1280)
+cap.set(4, 960)
 
 success, img = cap.read()
 circles = find_circles(img, show_image=True)
 
 number_of_tests = 100
-# mode = 'BGR'
-mode = 'LAB'
+L = 0.9
+a = 1.25
+mode = 'BGR'
+# mode = 'LAB'
 all_tests_colours = []
 
 totals = {
@@ -39,9 +42,10 @@ for j in range(number_of_tests):
     sg.OneLineProgressMeter('Progress', j, number_of_tests, 'key')
 
     colours_found = []
-    success, img = cap.read()
+    img = capture_frame(cap)
 
-    circles = find_circles(img, show_image=False)
+    circles = find_circles(img, show_image=False, hough_param1=3, hough_param2=80, hough_min_radius=22,
+                           hough_max_radius=32)
 
     i = 0
     colour_circles = []

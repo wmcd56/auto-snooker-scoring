@@ -8,8 +8,8 @@ from .ClassifyHSV import classify_hsv
 import numpy as np
 
 
-def find_balls(img, show_image=True):
-    circles = find_circles(img, show_image)
+def find_balls(img, hough_param1, hough_param2, show_image=True,):
+    circles = find_circles(img, show_image, hough_param1=hough_param1, hough_param2=hough_param2)
 
     i = 0
     colour_circles = []
@@ -19,7 +19,8 @@ def find_balls(img, show_image=True):
         # print('Radius is: ', r)  # debugging
         half_width = np.floor(np.sqrt((r ** 2) / 2))
         # print('half-width: ', half_width)  # debugging
-        roi = img[int(y - half_width):int(y + half_width), int(x - half_width):int(x + half_width)]
+        # roi = img[int(y - half_width):int(y + half_width), int(x - half_width):int(x + half_width)]
+        roi = img[int(y - r):int(y + r), int(x - r):int(x + r)]
         bgr_colour = get_ball_colour(roi)
         if bgr_colour is False:
             continue
@@ -39,6 +40,7 @@ def find_balls(img, show_image=True):
     balls = []
     white_ball = None
     for i in range(len(colour_circles)):
+        print(colour_circles[i][1])
         ball_colour = classify_bgr(colour_circles[i][1])
         colour_circles[i] = list(colour_circles[i])
         colour_circles[i].append(ball_colour)

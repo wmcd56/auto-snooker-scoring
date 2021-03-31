@@ -36,23 +36,10 @@ from CVFunctions.BGRtoHSV import bgr_to_hsv
 # from CVFunctions.ClassifyHSV import classify_hsv
 from CVFunctions.ClassifyBGR import classify_bgr
 from Functions.CalibrateColours import calibrate_colours
+from Functions.CalibrateCircleParameters import calibrate_circle_params
 from Functions.PixelsDistance import pixels_distance
+from CVFunctions.CaptureFrame import capture_frame
 
-
-# def get_colour_circles(img, circles, xyr, i):
-#     half_width = np.floor(np.sqrt((r ** 2) / 2))
-#     # print('half-width: ', half_width)  # debugging
-#     roi = img[int(y - half_width):int(y + half_width), int(x - half_width):int(x + half_width)]
-#     bgr_colour = get_ball_colour(roi)
-#     if bgr_colour is False:
-#         continue
-#     # hsv_colour = bgr_to_hsv(bgr_colour)
-#     temp_colour_circles = (circles[i][:], bgr_colour)
-#     # print("Temp colour: ", temp_colour_circles)  # debugging
-#     colour_circles.append(temp_colour_circles)
-#     cv2.circle(img, (x, y), r, (0, 255, 0), 4)
-#     cv2.rectangle(img, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
-#     return colour_circles
 
 def main():
     # ==================================================================================================================
@@ -62,23 +49,30 @@ def main():
     # This function requests the user to place balls of a certain colour within view of the camera
     # Can be run separately from the main file if calibrating once before multiple games
 
-    # colours = calibrate_colours()
+    cap_res = (1280, 960)
+
+    # hough_param1, hough_param2 = calibrate_circle_params(cap_res)
+    hough_param1, hough_param2 = 3, 80
+    L, a = 0.9, 1.25
+    # colours = calibrate_colours(L=L, a=a)
 
     print("starting...")
     print("place all balls in position")
     # time.sleep(10)
     # ------------------------------------------------------------------------------------------------------------------
-    # access a web cam
+    # access a web cam check
 
     # cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # comment out for big set up
-    cap = cv2.VideoCapture(0)  # comment out for small set up
-    cap.set(3, 1024)  # comment out for big set up
-    cap.set(4, 768)  # comment out for big set up
-    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)  # comment out for small set up
-    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)  # comment out for small set up
-    success, img = cap.read()
-    if success is False:
-        print('Failed to connect to camera')
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # comment out for small set up
+    # cap_res = (1024, 780)  # small set-up
+
+    # cap_res = (1920, 1080)  # big set-up
+    cap.set(3, cap_res[0])
+    cap.set(4, cap_res[1])
+
+    img = capture_frame(cap)
+    cv2.imshow("Table", img)
+
     # cv2.imshow('test', img)
     # cv2.waitKey(0)
     # ------------------------------------------------------------------------------------------------------------------
@@ -109,10 +103,11 @@ def main():
 
     # ------------------------------------------------------------------------------------------------------------------
     # Find the balls that have been laid on the table
-    white_ball, balls = find_balls(img)
+
+    img = capture_frame(cap, L, a)  # captures a frame and performs the necessary preprocessing
+    white_ball, balls = find_balls(img, hough_param1, hough_param2)
+
     frame = Frame(white_ball, balls)  # frame is now set up
-    # cv2.imshow("window", img)  # show the balls that have been on the table
-    # cv2.waitKey(0)
 
     # ------------------------------------------------------------------------------------------------------------------
     # variable initialisation
@@ -136,7 +131,7 @@ def main():
     white_gone = []  # used to count frames that the white ball has not been registered
     frame_count = 0  # used to ensure certain situations occur in subsequent frames
     max_frame_count = 300
-    consecutive_frames = 5  # used for the number of consecutive frames needed to register a ball as having been potted
+    consecutive_frames = 30  # used for the number of consecutive frames needed to register a ball as having been potted
     while True:
         # ==============================================================================================================
         # time.sleep(1)  # debugging
@@ -156,13 +151,11 @@ def main():
         additional_points = 0
         # --------------------------------------------------------------------------------------------------------------
         # capture new frame
-        success, img = cap.read()
-        if not success:
-            print('Failed to access camera')
-            exit()
+        img = capture_frame(cap)
+
         # --------------------------------------------------------------------------------------------------------------
         # find the balls in the new image & update locations (track)
-        white_ball_on_table, balls_on_table = find_balls(img, show_image=False)
+        white_ball_on_table, balls_on_table = find_balls(img, hough_param1, hough_param2, show_image=False)
 
         # debugging
         # out = ''
@@ -246,8 +239,8 @@ def main():
         for elem in balls_added:
             if elem[1] < frame_count - consecutive_frames:
                 balls_added.remove(elem)
-        if len(balls_added) >= 1:
-            print('Balls added: ', balls_added[0][0].colour)
+        # if len(balls_added) >= 1:
+            # print('Balls added: ', balls_added[0][0].colour)
         # once balls_added is longer than the required consecutive frames, check what balls have been added
         if len(balls_added) >= consecutive_frames:
             to_be_added = []

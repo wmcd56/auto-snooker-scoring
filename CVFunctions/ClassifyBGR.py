@@ -28,5 +28,28 @@ def classify_bgr(bgr, colours_bgr=None):
     # print(colours_bgr[index_min])
     return list(colours_bgr.keys())[list(colours_bgr.values()).index(colours_bgr_values[index_min])]
 
+# def classify_bgr(bgr, colours_bgr=None):
+#
+#     if colours_bgr is None:
+#         with open('C:/Users/mcdon/Desktop/AutoSnooker/Resources/colours_bgr.txt', 'r') as file:
+#             colours_bgr = json.load(file)
+#
+#     colours_bgr_values = list(colours_bgr.values())
+#     differences = []
+#
+#     for colour in colours_bgr_values:
+#         diff = 0  # difference in bgr colours
+#         for i in range(len(bgr)):
+#             # diff = diff + np.abs(bgr[i] - colour[i])
+#             diff = diff + (bgr[i]/colour[i])
+#         diff = abs(diff/len(bgr) - 1)
+#         differences.append(diff)
+#
+#     differences = np.array(differences)
+#
+#     index_min = np.argmin(differences)
+#
+#     return list(colours_bgr.keys())[list(colours_bgr.values()).index(colours_bgr_values[index_min])]
 
-# print(classify_bgr([242, 246, 247]))
+
+# print(classify_bgr([180, 188, 247]))

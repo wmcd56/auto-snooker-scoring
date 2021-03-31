@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 
-def find_circles(img, show_image=True):
+def find_circles(img, show_image=True, hough_param1=3, hough_param2=60, hough_min_radius=22, hough_max_radius=32):
     # ==============================================================================================================
     # Function find_circles
     # -recognises the number of circles and returns their locations and radii in a mask
@@ -19,10 +19,14 @@ def find_circles(img, show_image=True):
     # ==============================================================================================================
 
     output = img.copy()
-    img = cv2.medianBlur(img, 5)
-    cimg = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # cimg = img.copy()
+    cimg = cv2.medianBlur(img, 5)
+    cimg = cv2.cvtColor(cimg, cv2.COLOR_BGR2GRAY)
+    cimg = cv2.adaptiveThreshold(cimg, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
+    # cv2.imshow("test", cimg)
 
-    circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, 3, 80, minRadius=45, maxRadius=60)
+    circles = cv2.HoughCircles(cimg, cv2.HOUGH_GRADIENT, hough_param1, hough_param2, minRadius=hough_min_radius,
+                               maxRadius=hough_max_radius)
 
     # ensure at least some circles were found
     if circles is not None:
