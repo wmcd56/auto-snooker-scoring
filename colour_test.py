@@ -10,13 +10,17 @@ from CVFunctions.GetBallColour import get_ball_colour
 from CVFunctions.BGRtoHSV import bgr_to_hsv
 from CVFunctions.ClassifyBGR import classify_bgr
 from CVFunctions.CaptureFrame import capture_frame
+from CVFunctions.FindPockets import find_pockets
 
 cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # comment out for small set up
 cap.set(3, 1280)
 cap.set(4, 960)
 
-success, img = cap.read()
-circles = find_circles(img, show_image=True)
+img, original = capture_frame(cap)
+with open('C:/Users/mcdon/Desktop/AutoSnooker/Resources/pockets.txt', 'r') as file:
+    pockets = json.load(file)
+# pockets = find_pockets(cap)
+circles = find_circles(original,  show_image=True, pockets=pockets)
 
 number_of_tests = 100
 L = 0.9
@@ -42,17 +46,18 @@ for j in range(number_of_tests):
     sg.OneLineProgressMeter('Progress', j, number_of_tests, 'key')
 
     colours_found = []
-    img = capture_frame(cap)
+    img, original = capture_frame(cap)
 
-    circles = find_circles(img, show_image=False, hough_param1=3, hough_param2=80, hough_min_radius=22,
-                           hough_max_radius=32)
+    circles = find_circles(img, show_image=False, hough_param1=4.4, hough_param2=15, hough_min_radius=20,
+                           hough_max_radius=30, pockets=pockets)
 
     i = 0
     colour_circles = []
     if circles is not None:
         for (x, y, r) in circles:
             half_width = np.floor(np.sqrt((r ** 2) / 2))
-            roi = img[int(y - half_width):int(y + half_width), int(x - half_width):int(x + half_width)]
+            # roi = img[int(y - half_width):int(y + half_width), int(x - half_width):int(x + half_width)]
+            roi = img[int(y - r):int(y + r), int(x - r):int(x + r)]
             if mode == 'LAB':
                 roi = cv2.cvtColor(roi, cv2.COLOR_BGR2LAB)
                 lab_colour = get_ball_colour(roi)

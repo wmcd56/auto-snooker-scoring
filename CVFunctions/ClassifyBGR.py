@@ -6,8 +6,7 @@ import json
 import difflib
 
 
-def classify_bgr(bgr, colours_bgr=None):
-
+def classify(bgr, colours_bgr=None):
     if colours_bgr is None:
         with open('C:/Users/mcdon/Desktop/AutoSnooker/Resources/colours_bgr.txt', 'r') as file:
             colours_bgr = json.load(file)
@@ -26,7 +25,30 @@ def classify_bgr(bgr, colours_bgr=None):
     index_min = np.argmin(differences)
     # print(index_min)
     # print(colours_bgr[index_min])
-    return list(colours_bgr.keys())[list(colours_bgr.values()).index(colours_bgr_values[index_min])]
+    colour = list(colours_bgr.keys())[list(colours_bgr.values()).index(colours_bgr_values[index_min])]
+    return colour
+
+
+def classify_bgr(bgr_original, bgr_alt=None, colours_bgr=None):
+
+    colour = classify(bgr_original)
+    if colour == 'pink' or colour == 'yellow' or colour == 'green':
+        # print(f'colour: {colour}')
+        with open('C:/Users/mcdon/Desktop/AutoSnooker/Resources/colours_bgr_original.txt', 'r') as file:
+            colours_bgr = json.load(file)
+        if bgr_alt is None:
+            colour_alt = cv2.cvtColor(np.uint8([[bgr_original]]), cv2.COLOR_BGR2LAB)
+            colour_alt[..., 0] = colour_alt[..., 0] * (1/0.9)
+            colour_alt[..., 1] = colour_alt[..., 1] * (1/1.25)  # 1.2
+            colour_alt[..., 2] = colour_alt[..., 2] * 1
+            colour_alt = list(cv2.cvtColor(colour_alt, cv2.COLOR_LAB2BGR))
+            colour = classify(colour_alt[0][0], colours_bgr=colours_bgr)
+            return colour
+        else:
+            colour = classify(bgr_alt, colours_bgr=colours_bgr)
+            return colour
+    else:
+        return colour
 
 # def classify_bgr(bgr, colours_bgr=None):
 #
@@ -52,4 +74,4 @@ def classify_bgr(bgr, colours_bgr=None):
 #     return list(colours_bgr.keys())[list(colours_bgr.values()).index(colours_bgr_values[index_min])]
 
 
-# print(classify_bgr([180, 188, 247]))
+# print(classify_bgr([70, 31, 253]))

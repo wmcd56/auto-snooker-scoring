@@ -13,10 +13,17 @@ class Frame:
     # -Initialised with an input of an array of *structs, circles, should contain: x, y, r, colour, ball_id
     # -
     # ==================================================================================================================
-    def __init__(self, white_ball, balls, mode='practice'):
+    def __init__(self, balls, white_ball=None, mode='practice'):
         # for practice purposes
         p1_colour = 'purple'
         p2_colour = 'orange'
+
+        # TODO remove the following
+        # for ball in balls:
+        #     if ball.colour == 'white':
+        #         white_ball = WhiteBall(ball.loc, ball.radius, ball.colour)
+        #         balls.remove(ball)
+        #         break
 
         self.player1 = Player(p1_colour)
         self.player2 = Player(p2_colour)
@@ -47,6 +54,85 @@ class Frame:
         current_player = self.player1
         current_player.current_points += additional_points
 
+    def track_balls(self, balls_on_table):
+        # --------------------------------------------------------------------------------------------------------------
+        # INPUTS: self: frame object,
+        #         balls_on_table: a list of balls found on the table
+        #
+        # OPERATION: update buffer of past frame locations (ball.loc)
+        #
+        # RETURN: updated_balls, a list of balls which have been successfully updated
+        # --------------------------------------------------------------------------------------------------------------
+
+        reds_on_table = []
+        colours_on_table = []
+        frame_reds = []
+        frame_colours = []
+        updated_balls = []
+        indexes = []
+        frame_balls = self.balls
+
+        # split the balls into colours and reds for loop efficiency
+        for b in balls_on_table:
+            if b.colour == 'red':
+                reds_on_table.append(b)  # make a list of reds from the balls currently on the table
+                continue
+            else:
+                colours_on_table.append(b)
+
+        for b in frame_balls:
+            if b.colour == 'red':
+                frame_reds.append(b)
+                continue
+            else:
+                frame_colours.append(b)
+
+        for c in colours_on_table:
+            differences = []
+
+            # create a list of differences for the location of colour balls on table and saved colour balls
+            for colour in frame_colours:
+                differences.append(pixels_distance(c.loc[0], colour.loc[0]))
+            if differences:
+                min_diff = min(differences)  # find the minimum difference
+                index = differences.index(min_diff)  # find index of minimum difference
+                # print(f'c1: {frame_colours[index].colour}, c2: {c.colour}')
+                if (min_diff <= c.radius*3) and (frame_colours[index].colour == c.colour):  # only update if same colour
+
+                    frame_colours[index].track_ball(c.loc[0])  # update the correct red ball with the new location
+                    updated_balls.append(frame_colours[index])
+                    # indexes.append(index)
+
+        for r in reds_on_table:
+            differences = []
+            for red in frame_reds:  # create a list of differences for the location of reds on table and previous frame
+                differences.append(pixels_distance(r.loc[0], red.loc[0]))
+            if differences:
+                min_diff = min(differences)  # find the minimum difference
+                index = differences.index(min_diff)  # find index of minimum difference
+                if min_diff <= r.radius*3:  # only update the ball if the minimum distance is less than the radius width
+                    frame_reds[index].track_ball(r.loc[0])  # update the correct red ball with the new location
+                    updated_balls.append(frame_reds[index])
+                    # indexes.append(index)
+
+        return updated_balls
+
+        # for b in balls_on_table:
+        #     differences = []
+        #     for ball in frame_balls:
+        #         differences.append(pixels_distance(b.loc[0], ball.loc[0]))
+        #     if differences:
+        #         min_diff = min(differences)  # find the minimum difference
+        #         index = differences.index(min_diff)  # find index of minimum difference
+        #
+        #         # only update the ball if the minimum distance is less than the radius width and same colours
+        #         # if (min_diff <= b.radius) and (frame_balls[index].colour == b.colour):
+        #         if min_diff <= b.radius:
+        #             frame_balls[index]track_ball(b.loc[0])  # update the correct ball with the new location
+        #             updated_balls.append(frame_balls[index])
+        #             indexes.append(index)
+        # return updated_balls
+
     def balls_moving(self):
         totals = []
         balls_to_check = []
@@ -54,8 +140,11 @@ class Frame:
         # check past five frames to see if balls are all static
         for i in range(5):
             xy_total = 0
+            balls_to_check = []
+
             # TODO: review how this works in tandem with the white_ball_moving function
             xy_total = xy_total + self.white_ball.ball.loc[i][0] + self.white_ball.ball.loc[i][1]
+
             for ball in self.balls:
                 if len(ball.loc) >= 5:  # ensure that all balls being checked have enough length in loc deque
                     balls_to_check.append(ball)  # can arise that they do not have enough length when spotted
@@ -71,12 +160,13 @@ class Frame:
         for num in totals:
             sum_xy = sum_xy + num
 
-        # each xy_total for each frame must be within +/-5 of the average of the five frames
+        # each xy_total for each frame must be within +/-10 of the average of the five frames
         for num in totals:
-            if num-5 <= sum_xy/len(totals) <= num+5:
+            if num-10 <= sum_xy/len(totals) <= num+10:
                 balls_moving = False
             else:
                 balls_moving = True
+
 
         if balls_moving is not None:
             return balls_moving

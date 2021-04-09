@@ -6,8 +6,10 @@ def capture_frame(cap, L=0.9, a=1.25):
     if success is False:
         print('Failed to connect to camera')
 
+    original = img.copy()
+
     # reduce noise
-    img = cv2.GaussianBlur(img, (5, 5), 1)
+    img = cv2.GaussianBlur(img, (5, 5), 2)
 
     # perform histogram equalization on the luminance channel Y using CLAHE
     cimg = img.copy()
@@ -23,4 +25,4 @@ def capture_frame(cap, L=0.9, a=1.25):
     img_lab[..., 1] = img_lab[..., 1] * a  # 1.2
     img_lab[..., 2] = img_lab[..., 2] * 1
     img = cv2.cvtColor(img_lab, cv2.COLOR_LAB2BGR)
-    return img
+    return img, original

@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from matplotlib import pyplot as plt
 from collections import deque
+from Functions.PixelsDistance import pixels_distance
 
 
 class Ball:
@@ -41,8 +42,14 @@ class Ball:
         # RETURN: ball_moving (boolean)
         # --------------------------------------------------------------------------------------------------------------
         colour = self.colour
+
+        # TODO: check this added condition's functionality (31/03/21)
         if new_loc is not None:
+            # if self.loc[0][0] - 25 <= new_loc[0] <= self.loc[0][0] + 25:
             self.loc.appendleft(new_loc)
+
+        # if new_loc is not None and (self.loc[0][0] - 25 <= new_loc <= self.loc[0][0] + 25):
+        #     self.loc.appendleft(new_loc)
 
         # if the new centre is less than 5 pixels from the last centre in x and y directions mark the ball as not moving
         # print(self.loc[0][0])

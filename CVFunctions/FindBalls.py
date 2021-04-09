@@ -1,3 +1,5 @@
+import json
+
 from Classes.Ball import Ball
 from Classes.WhiteBall import WhiteBall
 from .FindCircles import find_circles
@@ -8,8 +10,13 @@ from .ClassifyHSV import classify_hsv
 import numpy as np
 
 
-def find_balls(img, hough_param1, hough_param2, show_image=True,):
-    circles = find_circles(img, show_image, hough_param1=hough_param1, hough_param2=hough_param2)
+def find_balls(img, hough_param1, hough_param2, show_image=True,  pockets=None, mode='Normal'):
+    if pockets is None:
+        with open('C:/Users/mcdon/Desktop/AutoSnooker/Resources/pockets.txt', 'r') as file:
+            pockets = json.load(file)
+
+
+    circles = find_circles(img, show_image, hough_param1=hough_param1, hough_param2=hough_param2, pockets=pockets)
 
     i = 0
     colour_circles = []
@@ -40,14 +47,20 @@ def find_balls(img, hough_param1, hough_param2, show_image=True,):
     balls = []
     white_ball = None
     for i in range(len(colour_circles)):
-        print(colour_circles[i][1])
+        # print(colour_circles[i][1])
         ball_colour = classify_bgr(colour_circles[i][1])
         colour_circles[i] = list(colour_circles[i])
         colour_circles[i].append(ball_colour)
         location = (colour_circles[i][0][0], colour_circles[i][0][1])
         radius = colour_circles[i][0][2]
-        if ball_colour == 'white':
-            white_ball = WhiteBall(location, radius, ball_colour)
+        if mode == 'Initial':
+            if ball_colour == 'white':
+                white_ball = WhiteBall(location, radius, ball_colour)
+            else:
+                balls.append(Ball(location, radius, ball_colour))
         else:
             balls.append(Ball(location, radius, ball_colour))
-    return white_ball, balls
+    if mode == 'Initial':
+        return white_ball, balls
+    else:
+        return balls
