@@ -19,7 +19,7 @@ class Ball:
 
     ball_order = ['yellow', 'green', 'brown', 'blue', 'pink', 'black']
 
-    def __init__(self, loc=None, radius=None, colour=None, ball_id=None):
+    def __init__(self, loc=None, radius=None, colour=None, velocity=None, ball_id=None):
 
         # self.loc = [None, None, None, None, loc]
         self.loc = deque([], maxlen=100)  # can be changed
@@ -28,6 +28,7 @@ class Ball:
         self.radius = radius
         self.colour = colour
         self.points_if_scored = Ball.colour_point_list[colour]
+        self.velocity = velocity
         self.ball_id = ball_id
 
         # print(self.colour, ": ", self.loc[0], ", ", self.loc[1])
@@ -54,13 +55,13 @@ class Ball:
         # if the new centre is less than 5 pixels from the last centre in x and y directions mark the ball as not moving
         # print(self.loc[0][0])
 
-        if (self.loc[1][0] - 5 <= self.loc[0][0] <= self.loc[1][0] + 5) and \
-                (self.loc[1][1] - 5 <= self.loc[0][1] <= self.loc[1][1] + 5):
+        if (self.loc[1][0] - 2 <= self.loc[0][0] <= self.loc[1][0] + 2) and \
+                (self.loc[1][1] - 2 <= self.loc[0][1] <= self.loc[1][1] + 2):
             ball_moving = False
             # print(f"The {colour} ball is not moving")
         # if the new centre is greater than 5 pixels from the last centre in x or y directions mark the ball as moving
-        elif (self.loc[0][0] <= self.loc[1][0] - 5) or (self.loc[0][0] >= self.loc[1][0] + 5) or \
-                (self.loc[0][1] <= self.loc[1][1] - 5) or (self.loc[0][1] >= self.loc[1][1] + 5):
+        elif (self.loc[0][0] <= self.loc[1][0] - 2) or (self.loc[0][0] >= self.loc[1][0] + 2) or \
+                (self.loc[0][1] <= self.loc[1][1] - 2) or (self.loc[0][1] >= self.loc[1][1] + 2):
             ball_moving = True
             # print(f"The {colour} ball is moving")
         else:
@@ -68,3 +69,18 @@ class Ball:
             return
 
         return ball_moving
+
+    def ball_velocity(self, frames=None):
+        distance = 0
+        if frames is None:
+            frames = 10
+        for i in range(frames):
+            distance += pixels_distance(self.loc[i], self.loc[i + 1])
+        speed_per_frame = distance / frames
+        if self.loc[0][1] != self.loc[frames - 1][1]:
+            direction = (self.loc[0][0] - self.loc[frames - 1][0]) / (
+                        self.loc[0][1] - self.loc[frames - 1][1])  # x2- x1 / y2-y1
+        else:
+            direction = 0.0
+        self.velocity = [speed_per_frame, direction]
+        return [speed_per_frame, direction]

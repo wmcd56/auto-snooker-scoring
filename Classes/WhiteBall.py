@@ -27,7 +27,7 @@ class WhiteBall:
             # potentially a place for multiprocessing as it could happen that two balls collide at exactly the same time
             # check to find the first ball whose distance is closer than that of two radii +/-5 pixels
             for elem in distances:
-                if elem[1] - 10 <= 2*elem[0].radius <= elem[1] + 10:
+                if elem[1] - 5 <= 2*elem[0].radius <= elem[1] + 5:
                     print(f"The white ball collided with the {elem[0].colour} ball first")
                     first_ball = elem[0]
                     break

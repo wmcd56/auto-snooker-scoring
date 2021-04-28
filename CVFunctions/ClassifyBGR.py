@@ -32,7 +32,7 @@ def classify(bgr, colours_bgr=None):
 def classify_bgr(bgr_original, bgr_alt=None, colours_bgr=None):
 
     colour = classify(bgr_original)
-    if colour == 'pink' or colour == 'yellow' or colour == 'green':
+    if colour == 'pink' or colour == 'green':  # or colour == 'yellow'
         # print(f'colour: {colour}')
         with open('C:/Users/mcdon/Desktop/AutoSnooker/Resources/colours_bgr_original.txt', 'r') as file:
             colours_bgr = json.load(file)

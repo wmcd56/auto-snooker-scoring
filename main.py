@@ -39,6 +39,7 @@ from CVFunctions.ClassifyBGR import classify_bgr
 from Functions.CalibrateColours import calibrate_colours
 from Functions.CalibrateCircleParameters import calibrate_circle_params
 from Functions.PixelsDistance import pixels_distance
+from Functions.FreeBallSearch import free_ball_search
 from CVFunctions.CaptureFrame import capture_frame
 
 
@@ -61,7 +62,7 @@ def print2app(string, window):
     window['print_line'].update(string)
 
 
-def main(window, ball_number):
+def main(window, mode, ball_number):
     # ==================================================================================================================
     # FRAME SET-UP
 
@@ -142,9 +143,10 @@ def main(window, ball_number):
     balls_found = []
     # use voting algorithm to establish exactly what circles are balls
     for i in range(consecutive_frames):
+        # sg.OneLineProgressMeter('Progress', i, consecutive_frames, 'key')
         img, original = capture_frame(cap, L, a)  # captures a frame and performs the necessary preprocessing
         white_ball, balls = find_balls(img, hough_param1, hough_param2, mode='Initial',
-                                       show_image=False, pockets=pockets)
+                                       show_image=False, pockets=pockets, min_radius=20, max_radius=30)
         if white_ball is not None:
             if i < 5:
                 whites_found.append([white_ball, votes])
@@ -228,7 +230,7 @@ def main(window, ball_number):
         colours_bgr_original = json.load(file)
 
     ball_to_hit = ['red']  # first ball to hit must be red, this is updated once a red is hit
-    ball_pocketed = ['']  # this list holds the balls which were pocketed in the last shot
+    ball_pocketed = []  # this list holds the balls which were pocketed in the last shot
     ball_index = -1  # used in the second stage, to get what ball should be pocketed next, starts at -1 as +1 is added
     foul_flag = False
     foul_type = ''
@@ -244,12 +246,20 @@ def main(window, ball_number):
     initial_white_pos = (0, 0)
     balls_moving = False
     balls_moving_prev = False
+    shot_in_progress = False
+    shot_in_progress_list = []
     white_moving = False
     white_moving_prev = False
+    first_ball = None
     first_ball_flag = False
     white_moving_list = []
     white_moving_count = []
     white_still_count = []
+    white_ball_stopped = False
+
+    turn_ended = False
+    turn_event = None
+    foul_points = 0
 
     frame_count = 0  # used to ensure certain situations occur in subsequent frames
     max_frame_count = 300000
@@ -314,7 +324,7 @@ def main(window, ball_number):
                 white_gone.remove(elem)
         # print(len(white_gone))
         # if there are more than {consecutive_frames} where the white is missing, flag a foul
-        if len(white_gone) >= (consecutive_frames):
+        if len(white_gone) >= consecutive_frames:
             foul_flag = True
             foul_type += 'White ball has been potted.\n'
             white_gone_flag = True
@@ -327,9 +337,12 @@ def main(window, ball_number):
                 frame_colours.append(ball.colour)
             else:
                 frame_reds.append(ball.colour)
+        # print(f'balls on table: {len(balls_on_table)}, frame balls: {len(frame.balls)}')
+
         if len(balls_on_table) > len(frame.balls):
             for b in balls_on_table:
-                if (white_gone_flag is True) and (white_on_table is True) and (b.colour == 'white'):
+                # TODO review this functionality to add white ball back in
+                if (white_gone_flag is True) and (b.colour == 'white'):  # and (white_on_table is True):
                     balls_added.append((b, frame_count))
                 elif (b.colour == 'red') or (b.colour == 'white') or (b.colour in frame_colours):
                     continue
@@ -338,24 +351,32 @@ def main(window, ball_number):
 
         # remove any old balls recorded in balls_added
         for elem in balls_added:
-            if elem[1] < frame_count - consecutive_frames:
+            # need to keep balls_added longer than consecutive_frames
+            if elem[1] < (frame_count - consecutive_frames*1.5):
                 balls_added.remove(elem)
         # if len(balls_added) >= 1:
             # print('Balls added: ', balls_added[0][0].colour)
         # once balls_added is longer than the required consecutive frames, check what balls have been added
         if len(balls_added) >= consecutive_frames:
             to_be_added = []
+            to_remove = []
+            # TODO add ball vote here
             for elem in balls_added:
                 count_frames_present = 0
                 for e in balls_added:
-                    if elem[0].loc[0] == e[0].loc[0]:
+                    if pixels_distance(elem[0].loc[0], e[0].loc[0]) <= 10:
                         count_frames_present += 1
-                # if the spotted ball has been present in the last five frames add it to frame.balls
+                        to_remove.append(e)
+                # if the spotted ball has been present in the last consecutive_frames add it to frame.balls
                 if count_frames_present >= consecutive_frames:
                     frame.balls.append(elem[0])
+                    for e_remove in to_remove:
+                        if e_remove in balls_added:
+                            balls_added.remove(e_remove)
                     if elem[0].colour == 'white':
                         white_gone_flag = False
                     print(f'The {elem[0].colour} ball has been spotted.')
+                    print2app(f'The {elem[0].colour} ball has been spotted.', window)
                     break
 
         # 3. """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -391,9 +412,9 @@ def main(window, ball_number):
                         if distance <= pocket[1]+30:  # if the distance is less than the radius of pocket + 10
                             pocketed = True
                             print('Removed: ', elem[0].colour)
-                            ball_pocketed = elem[0].colour
+                            ball_pocketed.append(elem[0].colour)
                             if elem[0].colour in ball_to_hit:  # the correct ball colour has been pocketed
-                                if len(frame_reds) >= 1:
+                                if len(frame_reds) > 1:
                                     if 'red' in ball_to_hit:
                                         ball_to_hit = Ball.ball_order
                                         print('Ball to hit: ', ball_to_hit)
@@ -423,29 +444,47 @@ def main(window, ball_number):
                         break
         # balls which have been potted (or which have left the table) have been removed
         # --------------------------------------------------------------------------------------------------------------
-        # Foul and game checks
+        # white ball fouls and game checks
+        # 1. check for the first ball that the white collides with
+        # 2. check to see if the white collided with a ball
+
+        # remove old elements from lists
+        if len(white_moving_list) > consecutive_frames:
+            white_moving_list.pop(0)
+        if len(shot_in_progress_list) > consecutive_frames:
+            shot_in_progress_list.pop(0)
+
 
         # check if balls are moving
-        # TODO change literal
         if len(frame.white_ball.ball.loc) >= min_frames:  # if there are at least five frames to check
-            balls_moving = frame.balls_moving()
+            balls_moving = frame.balls_moving(min_frames)
+            if balls_moving:
+                shot_in_progress = True
+                shot_in_progress_list.append(shot_in_progress)
+            else:
+                shot_in_progress = False
+                shot_in_progress_list.append(shot_in_progress)
+            # if len(shot_in_progress_list) > 0:
+            #     print(shot_in_progress_list[-1])
             white_moving = white_ball.ball.track_ball()
-
-            # make a list of booleans for the past {consecutive_frames} frames and remove old elements
             white_moving_list.append([white_moving, frame_count])
-            for elem in white_moving_list:
-                if elem[1] <= (frame_count - consecutive_frames):
-                    white_moving_list.remove(elem)
+            # for elem in white_moving_list:
+            #     if elem[1] <= (frame_count - consecutive_frames):
+            #         white_moving_list.remove(elem)
 
-            # if white_moving is True and white_moving_prev is False:
-                if len(white_moving_list) >= min_frames:
-                    if (white_moving_list[-1] and white_moving_list[-2]) and not \
-                            (white_moving_list[-3] and white_moving_list[-4]):
-                        initial_white_pos = white_ball.ball.loc[0]
-                        first_ball_flag = False
+            # if the white ball started moving
+            if len(white_moving_list) >= min_frames:
+                if (white_moving_list[-1] and white_moving_list[-2]) and not \
+                        (white_moving_list[-3] and white_moving_list[-4]):
+                    print("white started moving")
+                    first_ball_flag = False  # the white ball hasn't hit a ball yet
+                    white_ball_stopped = False
 
+            # for i in range(min_frames):
+            #     white_moving = white_moving and white_moving_list[-i]
             if white_moving:
-                first_ball = white_ball.first_collision(frame.balls)
+                if first_ball_flag is False:
+                    first_ball = frame.white_ball.first_collision(frame.balls)
                 if first_ball is not None:
                     first_ball_flag = True
             else:
@@ -454,22 +493,22 @@ def main(window, ball_number):
             # determine if the white ball was moving and has now stopped
             out1 = True
             out2 = True
-            if len(white_moving_list) > (min_frames*4):
+            if (len(white_moving_list) > (min_frames*4)) and (not white_ball_stopped):
                 for i in range(1, min_frames*2 + 1):
                     out1 = out1 and white_moving_list[-i][0]
 
                 for i in range(min_frames*2 + 1, ((min_frames * 4) + 1)):
                     out2 = out2 and white_moving_list[-i][0]
 
-            # if white_moving is False and white_moving_prev is True:
             if (not out1) and out2:
+                white_ball_stopped = True
                 print('First ball flag: ', first_ball_flag)
                 # if the white ball is not still in the same position (false trigger of balls_moving)
                 # if (initial_white_pos[0] - 5 <= white_ball.ball.loc[0][0] <= initial_white_pos[0] + 5) is False:
                 if first_ball_flag is False:
                     foul_flag = True
                     foul_type += 'Failed to hit another ball with the cue ball. \n'
-                first_ball_flag = False
+                    first_ball_flag = True
             if first_ball is not None:
                 if first_ball.colour not in ball_to_hit:
                     foul_flag = True
@@ -483,15 +522,80 @@ def main(window, ball_number):
             foul_type = "Manually identified foul"
 
         if foul_flag:
-            # print('Break is over, foul has occurred. \nFoul: ', foul_type)
+            turn_ended = True
             print2app(f"Foul: {foul_type}", window)
             # window.close()
             # exit()
 
+        # --------------------------------------------------------------------------------------------------------------
+        # Update Players' scores and switch player if needed
+
         # update player's score
         if manual_additional_score is not None:
             additional_points += int(manual_additional_score)
-        frame.update_score(additional_points)
+        frame.update_score(frame.current_player, additional_points)
+
+        # check to see if the turn is over
+        # determine if the balls were moving and have now stopped
+        out1 = True
+        out2 = True
+        if len(shot_in_progress_list) > (min_frames * 6):
+            t1 = 0
+            f1 = 0
+            t2 = 0
+            f2 = 0
+
+            for i in range(1, min_frames * 3 + 1):
+            # for i in shot_in_progress_list[-1: -(min_frames * 2 + 1)]:
+                # out1 = out1  shot_in_progress_list[-i]
+                if shot_in_progress_list[-i] is True:
+                    t1 += 1
+                else:
+                    f1 += 1
+            if t1 > f1:
+                out1 = True
+            else:
+                out1 = False
+
+            for i in range(min_frames * 3 + 1, ((min_frames * 6) + 1)):
+                # out2 = out2  shot_in_progress_list[-i]
+                if shot_in_progress_list[-i] is True:
+                    t2 += 1
+                else:
+                    f2 += 1
+            if t2 > f2:
+                out2 = True
+            else:
+                out2 = False
+
+        # print(f'Shot finished: {out1}, {not out2}')
+        if out1 and (not out2):  # a shot has concluded
+            if len(ball_pocketed) == 0:
+                turn_ended = True
+                turn_event = "Turn has ended. Failed to pocket a ball."
+                print(turn_event)
+                print2app(turn_event, window)
+            else:
+                ball_pocketed = []
+
+        if mode == 'Match':
+            # update opposite player's score for fouls committed
+            if foul_flag is True:
+                opposite_player = frame.get_opposite_player()
+                frame.update_score(opposite_player, (-1 * foul_points))
+                foul_flag = False
+
+            if turn_ended is True:
+                frame.switch_player()
+                turn_ended = False
+
+        elif mode == 'Practice':
+            if turn_ended is True:
+                output_str = 'Break is over, '
+                output_str += foul_type
+                if turn_event is not None:
+                    output_str += turn_event
+                print2app(output_str, window)
 
         # --------------------------------------------------------------------------------------------------------------
         # Image Visuals
@@ -517,6 +621,8 @@ def main(window, ball_number):
 
         # --------------------------------------------------------------------------------------------------------------
         # GUI events and updates
+
+        # TODO: update events for single and two players
         manual_foul = None
         manual_additional_score = None
 
@@ -562,7 +668,7 @@ def main(window, ball_number):
 
         # if the user prompts the program to finish
         if event == 'Finish':
-            window['final output'].update(f"Final score: {frame.obtain_scores()}")
+            window['final output'].update(f"Final score: {frame.obtain_scores(frame.current_player)}")
 
         # debugging and functionality check
         if manual_foul is not None:
@@ -571,7 +677,13 @@ def main(window, ball_number):
             print(f'manual additional score: {manual_additional_score}')
 
         window['ball'].update(ball_to_hit)
-        window['score'].update(str(frame.obtain_scores()))
+        if mode == 'Practice':
+            window['score'].update(str(frame.obtain_scores(frame.current_player)))
+        elif mode == 'Match':
+            window['Player_on'].update(str(frame.get_current_player().name))
+            window['P1_score'].update(str(frame.obtain_scores(frame.player1)))
+            window['P2_score'].update(str(frame.obtain_scores(frame.player2)))
+
         window.refresh()
 
         # end of while True:
@@ -594,7 +706,15 @@ break_layout = [[sg.Text("Player's current score: ", font=fnt), sg.Text("   ", f
 
 match_layout = [[sg.Text("Player 1's current score: ", font=fnt), sg.Text("   ", font=fnt, key='P1_score')],
                 [sg.Text("Player 2's current score: ", font=fnt), sg.Text("   ", font=fnt, key='P2_score')],
-                [sg.Text("Current player: ", font=fnt), sg.Text("          ", font=fnt, key='Player_on')],
+                [sg.Text("Current player: ", font=fnt), sg.Text("            ", font=fnt, key='Player_on')],
+                [sg.Text("Ball on: ", font=fnt), sg.Text("                                  "
+                                                         "                                  "
+                                                         "                                  ",
+                                                         font=fnt, key='ball')],
+                [sg.Text("                                                                  "
+                         "                                                                  ",
+                         font=fnt, key='print_line')],
+
                 [sg.Button('Input score manually', font=fnt, visible=True)],
                 [sg.Text("                                        ", font=fnt, key='manual score text'),
                  sg.Input(key='additional score', visible=False)],
@@ -619,4 +739,4 @@ while True:
 
 # call the main function
 if __name__ == '__main__':
-    main(window, ball_number)
+    main(window, mode, ball_number)

@@ -7,7 +7,7 @@ from Functions.PixelsDistance import pixels_distance
 from CVFunctions.FindCircles import find_circles
 
 
-def find_pockets(cap, min_radius=25, max_radius=35, show_image=False):
+def find_pockets(cap, min_radius=25, max_radius=35, hough_param1=4, hough_param2=100, show_image=False):
     print('Remove all the balls from the table.\nFinding pockets...')
     circles = []
     for i in range(0, 100):
@@ -23,7 +23,8 @@ def find_pockets(cap, min_radius=25, max_radius=35, show_image=False):
         kernel = np.ones((3, 3), np.uint8)
         otsu1 = cv2.dilate(otsu, kernel, iterations=1)
         otsu1 = cv2.cvtColor(otsu1, cv2.COLOR_GRAY2BGR)
-        circles_found = find_circles(img, show_image=show_image, hough_param1=4, hough_param2=100)
+        circles_found = find_circles(img, show_image=show_image, hough_param1=hough_param1, hough_param2=hough_param2,
+                                     hough_min_radius=min_radius, hough_max_radius=max_radius)
         # th3 = cv2.erode(th3, kernel, iterations=1)
         contours, hierarchy = cv2.findContours(otsu, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # img = cv2.drawContours(img, contours, -1, (0, 250, 0), 3)

@@ -10,13 +10,13 @@ from .ClassifyHSV import classify_hsv
 import numpy as np
 
 
-def find_balls(img, hough_param1, hough_param2, show_image=True,  pockets=None, mode='Normal'):
+def find_balls(img, hough_param1, hough_param2, min_radius=20, max_radius=30, show_image=True, pockets=None, mode='Normal'):
     if pockets is None:
         with open('C:/Users/mcdon/Desktop/AutoSnooker/Resources/pockets.txt', 'r') as file:
             pockets = json.load(file)
 
-
-    circles = find_circles(img, show_image, hough_param1=hough_param1, hough_param2=hough_param2, pockets=pockets)
+    circles = find_circles(img, show_image, hough_param1=hough_param1, hough_param2=hough_param2, pockets=pockets,
+                           hough_min_radius=min_radius, hough_max_radius=max_radius)
 
     i = 0
     colour_circles = []

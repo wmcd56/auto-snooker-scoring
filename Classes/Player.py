@@ -4,7 +4,8 @@ import cv2
 
 class Player:
 
-    def __init__(self, cue_colour):
+    def __init__(self, name, cue_colour):
+        self.name = name
         self.cue_colour = cue_colour
         self.current_points = 0
 

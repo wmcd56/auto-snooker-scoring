@@ -25,8 +25,9 @@ class Frame:
         #         balls.remove(ball)
         #         break
 
-        self.player1 = Player(p1_colour)
-        self.player2 = Player(p2_colour)
+        self.player1 = Player('Will', p1_colour)
+        self.player2 = Player('Will.i.am', p2_colour)
+        self.current_player = self.player1
         self.white_ball = white_ball
         self.balls = balls
 
@@ -40,19 +41,33 @@ class Frame:
         if self.white_ball:
             print(white_ball.ball.colour)
 
+    def set_current_player(self, player):
+        self.current_player = player
+
+    def switch_player(self):
+        if self.current_player == self.player1:
+            self.current_player = self.player2
+        elif self.current_player == self.player2:
+            self.current_player = self.player1
+
     def get_current_player(self):
-        # TODO: add functionality for obtaining the current player for game scenario
-        current_player = self.player1
+        current_player = self.current_player
         return current_player
 
-    def obtain_scores(self):
-        # return the current points of player
-        # TODO: add functionality for game scenario
-        return self.player1.current_points  # , self.player2.current_points
+    def get_opposite_player(self):
+        current_player = self.current_player
+        if current_player == self.player1:
+            opposite_player = self.player2
+        else:
+            opposite_player = self.player1
+        return opposite_player
 
-    def update_score(self, additional_points):
-        current_player = self.player1
-        current_player.current_points += additional_points
+    def obtain_scores(self, player):
+        # return the current points of player
+        return player.current_points  # , self.player2.current_points
+
+    def update_score(self, player, additional_points):
+        player.current_points += additional_points
 
     def track_balls(self, balls_on_table):
         # --------------------------------------------------------------------------------------------------------------
@@ -133,40 +148,54 @@ class Frame:
         #             indexes.append(index)
         # return updated_balls
 
-    def balls_moving(self):
+    def balls_moving(self, min_frames):
         totals = []
         balls_to_check = []
         balls_moving = None
         # check past five frames to see if balls are all static
-        for i in range(5):
-            xy_total = 0
-            balls_to_check = []
+        # for i in range(5):
+        #     xy_total = 0
+        #     balls_to_check = []
+        #
+        #     xy_total = xy_total + self.white_ball.ball.loc[i][0] + self.white_ball.ball.loc[i][1]
+        #
+        #     for ball in self.balls:
+        #         if len(ball.loc) >= 5:  # ensure that all balls being checked have enough length in loc deque
+        #             balls_to_check.append(ball)  # can arise that they do not have enough length when spotted
+        #
+        #     for ball in balls_to_check:
+        #         xy_total = xy_total + ball.loc[i][0] + ball.loc[i][1]
+        #     totals.append(xy_total)
+        #
+        # # print('xy_total: ', totals)  # debugging
+        #
+        # # check to see if the totals are similar enough to conclude that the balls are not moving
+        # sum_xy = 0
+        # for num in totals:
+        #     sum_xy = sum_xy + num
+        #
+        # # each xy_total for each frame must be within +/-10 of the average of the five frames
+        # for num in totals:
+        #     if num-10 <= sum_xy/len(totals) <= num+10:
+        #         balls_moving = False
+        #     else:
+        #         balls_moving = True
 
-            # TODO: review how this works in tandem with the white_ball_moving function
-            xy_total = xy_total + self.white_ball.ball.loc[i][0] + self.white_ball.ball.loc[i][1]
+        for ball in self.balls:
+            if len(ball.loc) >= min_frames:
+                balls_to_check.append(ball)
 
-            for ball in self.balls:
-                if len(ball.loc) >= 5:  # ensure that all balls being checked have enough length in loc deque
-                    balls_to_check.append(ball)  # can arise that they do not have enough length when spotted
-
-            for ball in balls_to_check:
-                xy_total = xy_total + ball.loc[i][0] + ball.loc[i][1]
-            totals.append(xy_total)
-
-        # print('xy_total: ', totals)  # debugging
-
-        # check to see if the totals are similar enough to conclude that the balls are not moving
-        sum_xy = 0
-        for num in totals:
-            sum_xy = sum_xy + num
-
-        # each xy_total for each frame must be within +/-10 of the average of the five frames
-        for num in totals:
-            if num-10 <= sum_xy/len(totals) <= num+10:
-                balls_moving = False
+        ball_moving = []
+        for ball in balls_to_check:
+            if pixels_distance(ball.loc[0], ball.loc[1]) <= 10:
+                ball_moving.append(False)
             else:
-                balls_moving = True
+                ball_moving.append(True)
 
+        if len(ball_moving) > 0:
+            balls_moving = False
+            for elem in ball_moving:
+                balls_moving = balls_moving or elem
 
         if balls_moving is not None:
             return balls_moving
