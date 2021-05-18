@@ -111,5 +111,5 @@ def calibrate_colours(mode=None, cap_res=(1280, 960), L=0.9, a=1.25, pockets=Non
     return colours
 
 
-# colour_dict = calibrate_colours()
+#colour_dict = calibrate_colours()
 

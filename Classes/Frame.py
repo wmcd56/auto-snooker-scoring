@@ -1,5 +1,5 @@
 import cv2
-import numpy
+import numpy as np
 from Functions.PixelsDistance import pixels_distance
 from .Ball import Ball
 from .Player import Player
@@ -13,7 +13,7 @@ class Frame:
     # -Initialised with an input of an array of *structs, circles, should contain: x, y, r, colour, ball_id
     # -
     # ==================================================================================================================
-    def __init__(self, balls, white_ball=None, mode='practice'):
+    def __init__(self, balls, white_ball=None, mode='practice', ball_on=None):
         # for practice purposes
         p1_colour = 'purple'
         p2_colour = 'orange'
@@ -30,6 +30,9 @@ class Frame:
         self.current_player = self.player1
         self.white_ball = white_ball
         self.balls = balls
+
+        if ball_on is not None:
+            self.ball_on = ball_on
 
         if mode == 'practice':
             print("Mode: Practice Break")
@@ -147,6 +150,53 @@ class Frame:
         #             updated_balls.append(frame_balls[index])
         #             indexes.append(index)
         # return updated_balls
+
+    def update_velocities(self):
+        if len(self.white_ball.ball.loc) >= 10:
+            self.white_ball.ball.ball_velocity()
+        for ball in self.balls:
+            if len(ball.loc) >= 10:
+                ball.ball_velocity()
+
+    def forecast_balls(self, ball=None, frames_forecast=None):
+        if ball is None:
+            for ball in self.balls:
+                if ball.velocity is not None:
+                    speed = ball.velocity[0]
+                    slope = ball.velocity[1]
+                    theta = abs(np.arctan(slope))
+                    vector = [speed*np.cos(theta), speed*np.sin(theta)]
+                    if ball.loc[0][0] < ball.loc[3][0]:  # if x2 is less than x1
+                        if ball.loc[0][1] < ball.loc[3][1]:  # if y2 is less than y1
+                            ball.forecast_position = [int(ball.loc[0][0] - vector[0]), int(ball.loc[0][1] - vector[1])]
+                        else:  # if y2 is greater than y1
+                            ball.forecast_position = [int(ball.loc[0][0] - vector[0]), int(ball.loc[0][1] + vector[1])]
+
+                    if ball.loc[0][0] > ball.loc[3][0]:  # if x2 is greater than x1
+                        if ball.loc[0][1] < ball.loc[3][1]:  # if y2 is less than y1
+                            ball.forecast_position = [int(ball.loc[0][0] + vector[0]), int(ball.loc[0][1] - vector[1])]
+                        else:  # if y2 is greater than y1
+                            ball.forecast_position = [int(ball.loc[0][0] + vector[0]), int(ball.loc[0][1] + vector[1])]
+
+        else:
+            if ball.velocity is not None:
+                speed = ball.velocity[0]
+                if frames_forecast is not None:
+                    speed = speed*frames_forecast
+                slope = ball.velocity[1]
+                theta = abs(np.arctan(slope))
+                vector = [speed * np.cos(theta), speed * np.sin(theta)]
+                if ball.loc[0][0] < ball.loc[3][0]:  # if x2 is less than x1
+                    if ball.loc[0][1] < ball.loc[3][1]:  # if y2 is less than y1
+                        ball.forecast_position = [int(ball.loc[0][0] - vector[0]), int(ball.loc[0][1] - vector[1])]
+                    else:  # if y2 is greater than y1
+                        ball.forecast_position = [int(ball.loc[0][0] - vector[0]), int(ball.loc[0][1] + vector[1])]
+
+                if ball.loc[0][0] > ball.loc[3][0]:  # if x2 is greater than x1
+                    if ball.loc[0][1] < ball.loc[3][1]:  # if y2 is less than y1
+                        ball.forecast_position = [int(ball.loc[0][0] + vector[0]), int(ball.loc[0][1] - vector[1])]
+                    else:  # if y2 is greater than y1
+                        ball.forecast_position = [int(ball.loc[0][0] + vector[0]), int(ball.loc[0][1] + vector[1])]
 
     def balls_moving(self, min_frames):
         totals = []

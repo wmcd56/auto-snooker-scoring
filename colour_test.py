@@ -22,7 +22,7 @@ with open('C:/Users/mcdon/Desktop/AutoSnooker/Resources/pockets.txt', 'r') as fi
 # pockets = find_pockets(cap)
 circles = find_circles(original,  show_image=True, pockets=pockets)
 
-number_of_tests = 100
+number_of_tests = 1000
 L = 0.9
 a = 1.25
 mode = 'BGR'
@@ -48,7 +48,7 @@ for j in range(number_of_tests):
     colours_found = []
     img, original = capture_frame(cap)
 
-    circles = find_circles(img, show_image=False, hough_param1=4.4, hough_param2=15, hough_min_radius=20,
+    circles = find_circles(img, show_image=False, hough_param1=4.6, hough_param2=15, hough_min_radius=20,
                            hough_max_radius=30, pockets=pockets)
 
     i = 0
@@ -107,10 +107,10 @@ for j in range(number_of_tests):
         location = 50, 50
         # radius = colour_circles[i][0][2]
         radius = 55
-        if ball_colour == 'white':
-            white_ball = WhiteBall(location, radius, ball_colour)
-        else:
-            balls.append(Ball(location, radius, ball_colour))
+        # if ball_colour == 'white':
+        #     white_ball = WhiteBall(location, radius, ball_colour)
+        # else:
+        balls.append(Ball(location, radius, ball_colour))
 
     if len(balls) > 0:
         for ball in balls:

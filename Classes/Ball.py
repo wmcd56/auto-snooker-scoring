@@ -30,6 +30,7 @@ class Ball:
         self.points_if_scored = Ball.colour_point_list[colour]
         self.velocity = velocity
         self.ball_id = ball_id
+        self.forecast_position = None
 
         # print(self.colour, ": ", self.loc[0], ", ", self.loc[1])
 
@@ -73,7 +74,7 @@ class Ball:
     def ball_velocity(self, frames=None):
         distance = 0
         if frames is None:
-            frames = 10
+            frames = 3
         for i in range(frames):
             distance += pixels_distance(self.loc[i], self.loc[i + 1])
         speed_per_frame = distance / frames

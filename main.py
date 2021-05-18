@@ -62,6 +62,39 @@ def print2app(string, window):
     window['print_line'].update(string)
 
 
+def open_adjusting_window(names, frame):
+    adjusting_layout = [[sg.Text("Select a player to adjust their score.", font=fnt)],
+              [sg.Combo(names, key='player to adjust')],
+              [sg.Combo(['Add', 'Subtract'], key='add or subtract')],
+              [sg.Text("Input the amount of points.", font=fnt), sg.Input(key='number of points')],
+              [sg.Text("Select the player who will take the next turn.", font=fnt)],
+              [sg.Combo(names, key='next turn')],
+              [sg.Button('EXIT', font=fnt)]]
+    adjusting_window = sg.Window("AutoSnooker - Adjust scores", adjusting_layout, size=(600, 250))
+
+    while True:
+        event, values = adjusting_window.Read()
+        if event:
+            player_to_adjust = values['player to adjust']
+            if values['add or subtract'] == 'Subtract':
+                multiplier = -1
+            else:
+                multiplier = 1
+            player_on = values['next turn']
+
+            if frame.player1.name == player_on:
+                frame.set_current_player(frame.player1)
+            elif frame.player2.name == player_on:
+                frame.set_current_player(frame.player2)
+
+            if frame.player1.name == player_to_adjust:
+                frame.player1.current_points += multiplier * int(values['number of points'])
+            elif frame.player2.name == player_to_adjust:
+                frame.player2.current_points += multiplier * int(values['number of points'])
+
+            adjusting_window.close()
+            break
+
 def main(window, mode, ball_number):
     # ==================================================================================================================
     # FRAME SET-UP
@@ -74,6 +107,7 @@ def main(window, mode, ball_number):
 
     # hough_param1, hough_param2 = calibrate_circle_params(cap_res)
     hough_param1, hough_param2 = 4.6, 15
+    hough_param1 = 4
     L, a = 0.9, 1.25
     # colours = calibrate_colours(L=L, a=a)
 
@@ -129,7 +163,7 @@ def main(window, mode, ball_number):
     for pocket in pockets:
         centre = (int(pocket[0][0]), int(pocket[0][1]))
         radius = int(pocket[1])
-        cv2.circle(original, centre, radius, (0, 255, 0), 2)
+        cv2.circle(original, centre, radius, (100, 255, 0), 6)
     cv2.imshow('pockets', original)
     cv2.waitKey(0)
 
@@ -146,7 +180,7 @@ def main(window, mode, ball_number):
         # sg.OneLineProgressMeter('Progress', i, consecutive_frames, 'key')
         img, original = capture_frame(cap, L, a)  # captures a frame and performs the necessary preprocessing
         white_ball, balls = find_balls(img, hough_param1, hough_param2, mode='Initial',
-                                       show_image=False, pockets=pockets, min_radius=20, max_radius=30)
+                                        show_image=False, pockets=pockets, min_radius=20, max_radius=30)
         if white_ball is not None:
             if i < 5:
                 whites_found.append([white_ball, votes])
@@ -267,6 +301,7 @@ def main(window, mode, ball_number):
     min_frames = 10
 
     while True:
+    # while frame_count < 1000:
         # ==============================================================================================================
         # time.sleep(1)  # debugging
         # print('Ball to hit: ', ball_to_hit)
@@ -298,13 +333,17 @@ def main(window, mode, ball_number):
                 if pixels_distance(ball.loc[0], pocket[0]) <= pocket[1]:
                     balls_on_table.remove(ball)
 
-        white_on_table = white_ball.track_white(balls_on_table)
+        white_on_table = frame.white_ball.track_white(balls_on_table)
         # if the white ball is not on the table record the frame number
         if white_on_table is False:
             white_gone.append(frame_count)
-
+        if frame_count > 50:
+            frame.update_velocities()
         updated_balls = frame.track_balls(balls_on_table)
-
+        # frame.forecast_balls()
+        # frame.forecast_balls(frame.white_ball.ball, 5)
+        print('White current pos: ', frame.white_ball.ball.loc[0])
+        print('Forecasted white pos: ', frame.white_ball.ball.forecast_position)
         # tracking is complete
         # --------------------------------------------------------------------------------------------------------------
         # Update frame.balls with new information
@@ -610,6 +649,10 @@ def main(window, mode, ball_number):
             for i in range(1, len(ball.loc)):
                 # if ball.loc[i] != (0, 0) and ball.loc[i - 1] != (0, 0):
                 cv2.line(original, ball.loc[i - 1], ball.loc[i], colours_bgr_original[ball.colour], thickness)
+        if white_ball is not None:
+            if white_ball.ball.forecast_position is not None:
+                cv2.line(original, tuple(white_ball.ball.loc[0]), tuple(white_ball.ball.forecast_position), [50, 245, 150], 5)
+
 
         # make the captured image larger and show it on screen
         # img = cv2.resize(img, (960, 540))
@@ -666,9 +709,13 @@ def main(window, mode, ball_number):
             window['_SUBMIT_'].update(visible=False)
             window['_CANCEL_'].update(visible=False)
 
+        if event == 'Adjust Scores':
+            open_adjusting_window([frame.player1.name, frame.player2.name], frame)
+
         # if the user prompts the program to finish
         if event == 'Finish':
             window['final output'].update(f"Final score: {frame.obtain_scores(frame.current_player)}")
+            break
 
         # debugging and functionality check
         if manual_foul is not None:
@@ -704,8 +751,8 @@ break_layout = [[sg.Text("Player's current score: ", font=fnt), sg.Text("   ", f
                     [sg.Button('Finish', font=fnt), sg.Button('EXIT', font=fnt)],
                     [sg.Text("                                         ", font=fnt, key='final output')]]
 
-match_layout = [[sg.Text("Player 1's current score: ", font=fnt), sg.Text("   ", font=fnt, key='P1_score')],
-                [sg.Text("Player 2's current score: ", font=fnt), sg.Text("   ", font=fnt, key='P2_score')],
+match_layout = [[sg.Text("Player 1's current score: ", font=fnt), sg.Text("      ", font=fnt, key='P1_score')],
+                [sg.Text("Player 2's current score: ", font=fnt), sg.Text("      ", font=fnt, key='P2_score')],
                 [sg.Text("Current player: ", font=fnt), sg.Text("            ", font=fnt, key='Player_on')],
                 [sg.Text("Ball on: ", font=fnt), sg.Text("                                  "
                                                          "                                  "
@@ -715,14 +762,17 @@ match_layout = [[sg.Text("Player 1's current score: ", font=fnt), sg.Text("   ",
                          "                                                                  ",
                          font=fnt, key='print_line')],
 
-                [sg.Button('Input score manually', font=fnt, visible=True)],
+                # [sg.Button('Input score manually', font=fnt, visible=True)],
                 [sg.Text("                                        ", font=fnt, key='manual score text'),
                  sg.Input(key='additional score', visible=False)],
-                [sg.Button('Input foul manually', font=fnt, visible=True)],
-                [sg.Text("                                        ", font=fnt, key='manual foul text'),
-                 sg.Input(key='manual foul', visible=False)],
-                [sg.Button('Submit', font=fnt, key='_SUBMIT_', visible=False),
-                 sg.Button('Cancel', font=fnt, key='_CANCEL_', visible=False)],
+                # [sg.Button('Input foul manually', font=fnt, visible=True)],
+                #[sg.Text("                                        ", font=fnt, key='manual foul text'),
+                 # sg.Input(key='manual foul', visible=False)],
+                # [sg.Button('Submit', font=fnt, key='_SUBMIT_', visible=False),
+                # sg.Button('Cancel', font=fnt, key='_CANCEL_', visible=False)],
+                [sg.Button('Replace Balls', font=fnt)],
+                [sg.Button('Adjust Current Player', font=fnt)],
+                [sg.Button('Adjust Scores', font=fnt)],
                 [sg.Button('Finish', font=fnt)],
                 [sg.Text("                                         ", font=fnt, key='final output')]]
 
@@ -734,9 +784,12 @@ while True:
         window = sg.Window("AutoSnooker", break_layout, size=(800, 250))
         break
     elif mode == 'Match':
+
         window = sg.Window("AutoSnooker", match_layout, size=(800, 600))
         break
 
 # call the main function
 if __name__ == '__main__':
     main(window, mode, ball_number)
+
+

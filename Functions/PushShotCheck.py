@@ -17,11 +17,35 @@ from Functions.CueSearch import cue_search
 from Functions.CueTipVelocity import cue_tip_velocity
 from Functions.PixelsDistance import pixels_distance
 from Functions.FreeBallSearch import free_ball_search
+from Functions.BallReplacement import save_ball_locations, ball_replacement
 
 
-def print2app(string, window):
-    window['print_line'].update(string)
+def print2app(string, window, num=None):
+    if num is None:
+        window['print_line_2'].update(string)
+    else:
+        window[f'print_line_{num}'].update(string)
 
+
+# TODO finish implementing free ball menu
+def free_ball_menu(frame):
+
+    potential_balls = []
+    for ball in frame.balls:
+        if ball.colour not in potential_balls and ball.colour not in frame.ball_on:
+            potential_balls.append(ball.colour)
+    potential_balls.append('SKIP')
+
+    free_ball_layout = [[sg.Text("Select a ball as a free ball.", font=fnt)],
+                        [sg.Combo(potential_balls, key='potential ball')],
+                        [sg.Text("                                     ", font=fnt)],
+                        [sg.Text("                                     ", font=fnt)],
+
+                        [sg.Button('EXIT', font=fnt)]]
+    free_ball_window = sg.Window("AutoSnooker - Free Ball", free_ball_layout, size=(400, 200))
+
+    while True:
+        event, values = free_ball_window.Read()
 
 fnt = 'Arial 18'
 layout = [[sg.Text("Player's current score: ", font=fnt), sg.Text("   ", font=fnt, key='score')],
@@ -31,11 +55,15 @@ layout = [[sg.Text("Player's current score: ", font=fnt), sg.Text("   ", font=fn
                                                              font=fnt, key='ball')],
                     [sg.Text("                                                                  "
                              "                                                                  ",
-                             font=fnt, key='print_line')],
+                             font=fnt, key='print_line_1')],
+                    [sg.Text("                                                                  "
+                             "                                                                  ",
+                             font=fnt, key='print_line_2')],
                     [sg.Button('Finish', font=fnt), sg.Button('EXIT', font=fnt)],
                     [sg.Text("                                         ", font=fnt, key='final output')]]
 
 window = sg.Window("AutoSnooker", layout, size=(800, 250))
+event, values = window.Read(timeout=1)
 
 # cap_res = (1920, 1080)
 cap_res = (1280, 960)
@@ -56,7 +84,7 @@ hough_param1, hough_param2 = 4.6, 15
 min_radius = 20
 max_radius = 30
 L, a = 0.9, 1.25
-ball_number = 5  # should be taken as user input
+ball_number = 6  # should be taken as user input
 ball_on = ['red']
 
 white_gone = []
@@ -95,8 +123,15 @@ balls_found = []
 for i in range(consecutive_frames):
     sg.OneLineProgressMeter('Progress', i, consecutive_frames-1, 'key')
     img, original = capture_frame(cap, L, a)  # captures a frame and performs the necessary preprocessing
+    # if i < 10:
+    #     show = True
+    # else:
+    show = False
     white_ball, balls = find_balls(img, 4, hough_param2, mode='Initial',
-                                   show_image=False, pockets=pockets, min_radius=min_radius, max_radius=max_radius)
+                                        show_image=show, pockets=pockets, min_radius=min_radius, max_radius=max_radius)
+    print(white_ball.ball.colour)
+    # for ball in
+
     print(len(balls))
     if white_ball is not None:
         if i < 5:
@@ -139,7 +174,7 @@ for index in range(0, length):
             whites_found[j] = whites_found[j + 1]
             whites_found[j + 1] = temp
 whites_found.reverse()
-print('White votes: ', whites_found[0][1])
+# print('White votes: ', whites_found[0][1])
 white_ball = whites_found[0][0]
 
 # only accept the {ball_number} balls of highest votes
@@ -168,14 +203,13 @@ for ball in balls:
             balls.remove(ball)
 
 if white_ball is not None:
-    frame = Frame(balls, white_ball=white_ball)  # frame is now set up
+    frame = Frame(balls, white_ball=white_ball, ball_on=ball_on)  # frame is now set up
 else:
     print('White ball not found, restart the application')
     exit()
 
 
-
-
+# free_ball_menu(frame)
 
 
 while True:
@@ -202,11 +236,14 @@ while True:
     # --------------------------------------------------------------------------------------------------------------
     # search for cues
 
-    b1, b2 = cue_search(original)
+    # b1, b2 = None, None
+    b1, b2, player = cue_search(original)
     if b1[0] is not None:
         b1_area = cv2.contourArea(b1[0], False)
     if b2[0] is not None:
         b2_area = cv2.contourArea(b2[0], False)
+    # if player is not None:
+        # print2app(f'Recognised player: {player}', window, 2)
 
     colour = [0, 0, 255]
 
@@ -248,7 +285,6 @@ while True:
 
     updated_balls = frame.track_balls(balls_on_table)
 
-
     ball_velocities = []
     for ball in frame.balls:
         if len(ball.loc) > min_frames:
@@ -281,7 +317,7 @@ while True:
                             print2app('', window)
                             print('PUSH SHOT 2')
     # TODO change ball velocities to use ball.velocity so that distances can be compared between the cue tip and ball
-    if c2_velocity is not None and len(ball_velocities) > 0:
+    if c2_velocity is not None and white_v is not None and len(ball_velocities) > 0:
         for v in ball_velocities:
             if (white_v[1] > 0) and (c2_velocity[1] > 0):
                 # if the distance between the cue and the white ball is less than the white ball radius plus the
@@ -323,13 +359,20 @@ while True:
             # if ball.loc[i] != (0, 0) and ball.loc[i - 1] != (0, 0):
             cv2.line(original, ball.loc[i - 1], ball.loc[i], colours_bgr_original[ball.colour], thickness)
 
-    snooker_out = free_ball_search(white_ball, frame.balls, ball_on, True, original)
+    if frame_count == 10:
+        save_ball_locations(white_ball, frame.balls)
+        print('saved ball locations...')
 
-    if snooker_out is not None:
-        if snooker_out[0] is True:
-            print2app(snooker_out[1], window)
-    else:
-        print2app('', window)
+    if frame_count == 100:
+        ball_replacement(cap, 'live', window, hough_param1, hough_param2, pockets)
+
+    # snooker_out = free_ball_search(white_ball, frame.balls, ball_on, True, original)
+    #
+    # if snooker_out is not None:
+    #     if snooker_out[0] is True:
+    #         print2app(snooker_out[1], window)
+    # else:
+    #     print2app('', window)
 
     cv2.imshow('live', original)
     frame_count += 1
